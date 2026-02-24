@@ -6,6 +6,8 @@ import {
   createEquipment,
   deleteEquipment,
   listEquipments,
+  searchEquipments,
+  updateEquipment,
 } from "./api/equipments";
 
 function withId(doc) {
@@ -33,6 +35,12 @@ export default function AppNew() {
 
   const [equipments, setEquipments] = useState([]);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [editingEquipmentId, setEditingEquipmentId] = useState(null);
+
+  const [searchTerm, setSearchTerm] = useState("");
+  const [searchBy, setSearchBy] = useState("usuario");
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
 
   const [loading, setLoading] = useState({
     units: false,
@@ -178,11 +186,36 @@ export default function AppNew() {
     [floors, selectedFloorId],
   );
 
+  const handleSearchEquipments = async (event) => {
+    if (event) {
+      event.preventDefault();
+    }
+    const term = searchTerm.trim();
+    if (!term) {
+      setSearchResults([]);
+      return;
+    }
+    setSearchLoading(true);
+    try {
+      const data = await safeRun(() =>
+        searchEquipments({
+          q: term,
+          by: searchBy,
+        }),
+      );
+      const list = normalizeList(data);
+      setSearchResults(list);
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
   const handleOpenAreaModal = async (area) => {
     const a = withId(area);
     setEditingArea(a);
     setSelectedAreaId(a.id);
     setIsAreaModalOpen(true);
+    setEditingEquipmentId(null);
     setEquipmentDraft({
       tipo: "notebook",
       proprietario: "",
@@ -256,9 +289,24 @@ export default function AppNew() {
     if (!selectedAreaId) return;
     const trimmedName = equipmentDraft.nomeMaquina.trim();
     if (!trimmedName) return;
-    await safeRun(() =>
-      createEquipment({ areaId: selectedAreaId, ...equipmentDraft, nomeMaquina: trimmedName }),
-    );
+
+    if (editingEquipmentId) {
+      await safeRun(() =>
+        updateEquipment(editingEquipmentId, {
+          ...equipmentDraft,
+          nomeMaquina: trimmedName,
+        }),
+      );
+    } else {
+      await safeRun(() =>
+        createEquipment({
+          areaId: selectedAreaId,
+          ...equipmentDraft,
+          nomeMaquina: trimmedName,
+        }),
+      );
+    }
+
     setEquipmentDraft((prev) => ({
       ...prev,
       proprietario: "",
@@ -268,12 +316,43 @@ export default function AppNew() {
       armazenamentoLivre: "",
       observacoes: "",
     }));
+    setEditingEquipmentId(null);
     await loadEquipments({ areaId: selectedAreaId });
   };
 
   const handleDeleteEquipment = async (equipmentId) => {
     await safeRun(() => deleteEquipment(equipmentId));
     await loadEquipments({ areaId: selectedAreaId });
+  };
+
+  const handleEditEquipment = (equipment) => {
+    const e = withId(equipment);
+    setEditingEquipmentId(e.id);
+    setEquipmentDraft({
+      tipo: e.tipo || "notebook",
+      proprietario: e.proprietario || "",
+      nomeMaquina: e.nomeMaquina || "",
+      usuarioLogado: e.usuarioLogado || "",
+      anydesk: e.anydesk || "",
+      kaspersky: e.kaspersky || "",
+      status: e.status || "ativo",
+      armazenamentoLivre: e.armazenamentoLivre || "",
+      observacoes: e.observacoes || "",
+    });
+  };
+
+  const handleCancelEditEquipment = () => {
+    setEditingEquipmentId(null);
+    setEquipmentDraft((prev) => ({
+      ...prev,
+      proprietario: "",
+      nomeMaquina: "",
+      usuarioLogado: "",
+      anydesk: "",
+      kaspersky: "",
+      armazenamentoLivre: "",
+      observacoes: "",
+    }));
   };
 
   const beginDrag = (event, area) => {
@@ -363,28 +442,6 @@ export default function AppNew() {
 
           <button
             type="button"
-            className="button button-ghost"
-            onClick={() => setIsEditMode((v) => !v)}
-            disabled={!selectedFloorId}
-          >
-            {isEditMode ? "Modo editar: ON" : "Modo editar: OFF"}
-          </button>
-
-          <button type="button" className="button button-ghost" onClick={handleAddUnit}>
-            + Unidade
-          </button>
-
-          <button
-            type="button"
-            className="button button-ghost"
-            onClick={handleAddFloor}
-            disabled={!selectedUnitId}
-          >
-            + Andar
-          </button>
-
-          <button
-            type="button"
             className="button button-primary"
             onClick={handleAddArea}
             disabled={!selectedUnitId || !selectedFloorId}
@@ -392,8 +449,52 @@ export default function AppNew() {
             <span>+</span>
             <span>Adicionar área</span>
           </button>
+
+          <form className="search-bar" onSubmit={handleSearchEquipments}>
+            <select
+              className="select"
+              value={searchBy}
+              onChange={(event) => setSearchBy(event.target.value)}
+            >
+              <option value="usuario">Usuário</option>
+              <option value="maquina">Máquina</option>
+            </select>
+            <input
+              className="field-input"
+              placeholder={
+                searchBy === "usuario"
+                  ? "Buscar por usuário..."
+                  : "Buscar por nome da máquina..."
+              }
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+            />
+            <button type="submit" className="button button-ghost">
+              Buscar
+            </button>
+          </form>
         </div>
       </header>
+
+      {searchTerm.trim() && (
+        <section className="search-results">
+          {searchLoading ? (
+            <div className="equipment-meta">Buscando equipamentos...</div>
+          ) : searchResults.length === 0 ? (
+            <div className="equipment-meta">Nenhum equipamento encontrado.</div>
+          ) : (
+            <ul>
+              {searchResults.map((equipment) => (
+                <li key={equipment.id} className="equipment-meta">
+                  <strong>{equipment.usuarioLogado || "-"}</strong> ·{" "}
+                  <span>{equipment.nomeMaquina}</span>{" "}
+                  {equipment.proprietario ? `· Proprietário: ${equipment.proprietario}` : ""}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
 
       <main className="canvas-container">
         <div className="canvas" onPointerMove={onDragMove} onPointerUp={endDrag}>
@@ -430,6 +531,30 @@ export default function AppNew() {
             ))
           )}
         </div>
+
+        <div className="bottom-toolbar">
+          <button
+            type="button"
+            className="button button-ghost"
+            onClick={() => setIsEditMode((v) => !v)}
+            disabled={!selectedFloorId}
+          >
+            {isEditMode ? "Modo editar: ON" : "Modo editar: OFF"}
+          </button>
+
+          <button type="button" className="button button-ghost" onClick={handleAddUnit}>
+            + Unidade
+          </button>
+
+          <button
+            type="button"
+            className="button button-ghost"
+            onClick={handleAddFloor}
+            disabled={!selectedUnitId}
+          >
+            + Andar
+          </button>
+        </div>
       </main>
 
       {isAreaModalOpen && editingArea ? (
@@ -450,6 +575,9 @@ export default function AppNew() {
           setEquipmentDraft={setEquipmentDraft}
           onAddEquipment={handleAddEquipment}
           onDeleteEquipment={handleDeleteEquipment}
+          onEditEquipment={handleEditEquipment}
+          onCancelEditEquipment={handleCancelEditEquipment}
+          isEditingEquipment={Boolean(editingEquipmentId)}
         />
       ) : null}
     </div>
@@ -470,6 +598,9 @@ function AreaModal({
   setEquipmentDraft,
   onAddEquipment,
   onDeleteEquipment,
+          onEditEquipment,
+          onCancelEditEquipment,
+          isEditingEquipment,
 }) {
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -548,6 +679,13 @@ function AreaModal({
                         onClick={() => onDeleteEquipment(equipment.id)}
                       >
                         Remover
+                      </button>
+                      <button
+                        type="button"
+                        className="button button-ghost"
+                        onClick={() => onEditEquipment(equipment)}
+                      >
+                        Editar
                       </button>
                     </div>
                   </div>
@@ -702,9 +840,24 @@ function AreaModal({
           <button type="button" className="button button-ghost" onClick={onSaveArea}>
             Salvar área
           </button>
-          <button type="button" className="button button-primary" onClick={onAddEquipment}>
-            Salvar equipamento
-          </button>
+          {isEditingEquipment ? (
+            <>
+              <button
+                type="button"
+                className="button button-ghost"
+                onClick={onCancelEditEquipment}
+              >
+                Cancelar edição
+              </button>
+              <button type="button" className="button button-primary" onClick={onAddEquipment}>
+                Atualizar equipamento
+              </button>
+            </>
+          ) : (
+            <button type="button" className="button button-primary" onClick={onAddEquipment}>
+              Salvar equipamento
+            </button>
+          )}
         </footer>
       </div>
     </div>
