@@ -16,7 +16,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Servir arquivos estáticos do uploads
+// Servir arquivos estáticos do uploads (DEVE VIR ANTES DE SPA FALLBACK)
 app.use(
   "/uploads",
   express.static(path.join(__dirname, "uploads"), {
@@ -24,7 +24,7 @@ app.use(
   }),
 );
 
-// Rotas da API
+// Rotas da API (DEVE VIR ANTES DE SPA FALLBACK)
 app.get("/api/health", (_req, res) => {
   res.json({ ok: true, message: "API Planta Cliniprev v2" });
 });
