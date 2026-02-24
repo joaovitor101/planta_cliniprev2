@@ -32,6 +32,8 @@ function getUploadsBaseUrl() {
     if (hostname === "localhost" || hostname === "127.0.0.1") {
       return "http://localhost:4000";
     }
+    // In production, use current origin
+    return window.location.origin;
   }
 
   return "";
