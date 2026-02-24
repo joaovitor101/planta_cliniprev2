@@ -30,11 +30,7 @@ export async function uploadEquipmentImage(id, file) {
   const formData = new FormData();
   formData.append("file", file);
 
-  const { data } = await api.post(`/equipments/${id}/image`, formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
-  });
+  const { data } = await api.post(`/equipments/${id}/image`, formData);
 
   return data;
 }
