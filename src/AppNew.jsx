@@ -70,6 +70,9 @@ export default function AppNew() {
     startY: 0,
     originX: 0,
     originY: 0,
+    originWidth: 0,
+    originHeight: 0,
+    mode: "move", // "move" | "resize"
   });
 
   async function safeRun(fn) {
@@ -355,7 +358,7 @@ export default function AppNew() {
     }));
   };
 
-  const beginDrag = (event, area) => {
+  const beginDrag = (event, area, mode = "move") => {
     if (!isEditMode) return;
     const a = withId(area);
     dragRef.current = {
@@ -366,6 +369,9 @@ export default function AppNew() {
       startY: event.clientY,
       originX: a.x || 0,
       originY: a.y || 0,
+      originWidth: a.width || 220,
+      originHeight: a.height || 120,
+      mode,
     };
     setSelectedAreaId(a.id);
     event.currentTarget.setPointerCapture(event.pointerId);
@@ -378,11 +384,19 @@ export default function AppNew() {
     const dx = event.clientX - d.startX;
     const dy = event.clientY - d.startY;
     setAreas((prev) =>
-      prev.map((a) =>
-        a.id === d.areaId
-          ? { ...a, x: Math.max(0, d.originX + dx), y: Math.max(0, d.originY + dy) }
-          : a,
-      ),
+      prev.map((a) => {
+        if (a.id !== d.areaId) return a;
+        if (d.mode === "resize") {
+          const nextWidth = Math.max(120, d.originWidth + dx);
+          const nextHeight = Math.max(80, d.originHeight + dy);
+          return { ...a, width: nextWidth, height: nextHeight };
+        }
+        return {
+          ...a,
+          x: Math.max(0, d.originX + dx),
+          y: Math.max(0, d.originY + dy),
+        };
+      }),
     );
   };
 
@@ -393,7 +407,13 @@ export default function AppNew() {
     dragRef.current.active = false;
     const area = areas.find((a) => a.id === d.areaId);
     if (!area) return;
-    await safeRun(() => patchArea(area.id, { x: area.x, y: area.y }));
+    if (d.mode === "resize") {
+      await safeRun(() =>
+        patchArea(area.id, { width: area.width || 220, height: area.height || 120 }),
+      );
+    } else {
+      await safeRun(() => patchArea(area.id, { x: area.x, y: area.y }));
+    }
   };
 
   return (
@@ -524,9 +544,20 @@ export default function AppNew() {
                   if (isEditMode) return;
                   handleOpenAreaModal(area);
                 }}
-                onPointerDown={(e) => beginDrag(e, area)}
+                onPointerDown={(e) => beginDrag(e, area, "move")}
               >
-                {area.name}
+                <span className="area-name">{area.name}</span>
+                {isEditMode ? (
+                  <span
+                    className="area-resize-handle"
+                    onPointerDown={(event) => {
+                      event.stopPropagation();
+                      beginDrag(event, area, "resize");
+                    }}
+                  >
+                    ⤢
+                  </span>
+                ) : null}
               </button>
             ))
           )}
