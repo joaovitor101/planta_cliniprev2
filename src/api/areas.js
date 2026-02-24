@@ -19,3 +19,16 @@ export async function deleteArea(id) {
   await api.delete(`/areas/${id}`);
 }
 
+export async function uploadAreaImage(id, file) {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const { data } = await api.post(`/areas/${id}/image`, formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+
+  return data;
+}
+

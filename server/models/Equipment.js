@@ -46,6 +46,10 @@ const equipmentSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    imagemUrl: {
+      type: String,
+      trim: true,
+    },
   },
   { timestamps: true },
 );

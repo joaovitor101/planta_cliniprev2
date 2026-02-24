@@ -26,3 +26,16 @@ export async function searchEquipments({ q, by }) {
   return data;
 }
 
+export async function uploadEquipmentImage(id, file) {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const { data } = await api.post(`/equipments/${id}/image`, formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+
+  return data;
+}
+

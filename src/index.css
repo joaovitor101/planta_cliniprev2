@@ -362,6 +362,36 @@ body {
   color: #6b7280;
 }
 
+.equipment-actions {
+  grid-column: 1 / -1;
+  margin-top: 4px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.equipment-upload-button {
+  position: relative;
+  overflow: hidden;
+}
+
+.area-image-wrapper {
+  margin-top: 4px;
+}
+
+.area-image {
+  width: 100%;
+  max-height: 220px;
+  object-fit: contain;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+}
+
+.area-image-actions {
+  margin-top: 4px;
+}
+
 .badge {
   display: inline-flex;
   align-items: center;

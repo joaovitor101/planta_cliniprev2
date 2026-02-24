@@ -16,6 +16,13 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+app.use(
+  "/uploads",
+  express.static(path.join(__dirname, "uploads"), {
+    maxAge: "7d",
+  }),
+);
+
 app.get("/api/health", (_req, res) => {
   res.json({ ok: true, message: "API Planta Cliniprev v2" });
 });

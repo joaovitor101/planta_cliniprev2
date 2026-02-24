@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createUnit, listUnits } from "./api/units";
 import { createFloor, listFloors } from "./api/floors";
-import { createArea, deleteArea, listAreas, patchArea } from "./api/areas";
+import { createArea, deleteArea, listAreas, patchArea, uploadAreaImage } from "./api/areas";
 import {
   createEquipment,
   deleteEquipment,
@@ -19,6 +19,31 @@ function withId(doc) {
 
 function normalizeList(docs) {
   return Array.isArray(docs) ? docs.map(withId) : [];
+}
+
+function getUploadsBaseUrl() {
+  const apiBase = import.meta.env.VITE_API_BASE_URL;
+  if (apiBase && apiBase.startsWith("http")) {
+    return apiBase.replace(/\/api\/?$/, "");
+  }
+
+  if (typeof window !== "undefined") {
+    const { hostname } = window.location;
+    if (hostname === "localhost" || hostname === "127.0.0.1") {
+      return "http://localhost:4000";
+    }
+  }
+
+  return "";
+}
+
+const uploadsBaseUrl = getUploadsBaseUrl();
+
+function buildImageUrl(path) {
+  if (!path) return "";
+  if (path.startsWith("http")) return path;
+  if (!uploadsBaseUrl) return path;
+  return `${uploadsBaseUrl}${path}`;
 }
 
 export default function AppNew() {
@@ -328,6 +353,14 @@ export default function AppNew() {
     await loadEquipments({ areaId: selectedAreaId });
   };
 
+  const handleUploadAreaImage = async (file) => {
+    if (!editingArea?.id || !file) return;
+    const updated = await safeRun(() => uploadAreaImage(editingArea.id, file));
+    const a = withId(updated);
+    setEditingArea(a);
+    setAreas((prev) => prev.map((x) => (x.id === a.id ? a : x)));
+  };
+
   const handleEditEquipment = (equipment) => {
     const e = withId(equipment);
     setEditingEquipmentId(e.id);
@@ -609,6 +642,7 @@ export default function AppNew() {
           onEditEquipment={handleEditEquipment}
           onCancelEditEquipment={handleCancelEditEquipment}
           isEditingEquipment={Boolean(editingEquipmentId)}
+          onUploadAreaImage={handleUploadAreaImage}
         />
       ) : null}
     </div>
@@ -632,6 +666,7 @@ function AreaModal({
           onEditEquipment,
           onCancelEditEquipment,
           isEditingEquipment,
+          onUploadAreaImage,
 }) {
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -703,7 +738,7 @@ function AreaModal({
                     <div className="equipment-meta">
                       Armazenamento livre: <strong>{equipment.armazenamentoLivre || "-"}</strong>
                     </div>
-                    <div style={{ marginTop: 4 }}>
+                    <div className="equipment-actions">
                       <button
                         type="button"
                         className="button button-ghost"
@@ -722,6 +757,30 @@ function AreaModal({
                   </div>
                 ))
               )}
+            </div>
+          </div>
+
+          <div className="field-group">
+            <div className="field-label">Imagem da área</div>
+            {area.imagemUrl ? (
+              <div className="area-image-wrapper">
+                <img src={buildImageUrl(area.imagemUrl)} alt={area.name} className="area-image" />
+              </div>
+            ) : (
+              <div className="equipment-meta">Nenhuma imagem cadastrada para esta área.</div>
+            )}
+            <div className="area-image-actions">
+              <label className="button button-ghost equipment-upload-button">
+                <span>{area.imagemUrl ? "Trocar imagem da área" : "Adicionar imagem da área"}</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  style={{ display: "none" }}
+                  onChange={(event) =>
+                    onUploadAreaImage(event.target.files?.[0] || null)
+                  }
+                />
+              </label>
             </div>
           </div>
 

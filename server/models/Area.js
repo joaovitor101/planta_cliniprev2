@@ -33,6 +33,10 @@ const areaSchema = new mongoose.Schema(
       type: Number,
       default: 120,
     },
+    imagemUrl: {
+      type: String,
+      trim: true,
+    },
   },
   { timestamps: true },
 );

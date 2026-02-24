@@ -1,7 +1,34 @@
 const express = require("express");
+const multer = require("multer");
+const fs = require("fs");
+const path = require("path");
 const Area = require("../models/Area");
 
 const router = express.Router();
+
+const uploadDir = path.join(__dirname, "..", "uploads");
+
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    cb(null, uploadDir);
+  },
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname) || ".jpg";
+    const name = `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
+    cb(null, name);
+  },
+});
+
+const upload = multer({
+  storage,
+  limits: {
+    fileSize: 2 * 1024 * 1024,
+  },
+});
 
 router.get("/", async (req, res, next) => {
   try {
@@ -40,6 +67,32 @@ router.patch("/:id", async (req, res, next) => {
     next(error);
   }
 });
+
+router.post(
+  "/:id/image",
+  upload.single("file"),
+  async (req, res, next) => {
+    try {
+      const { id } = req.params;
+
+      if (!req.file) {
+        return res.status(400).json({ message: "Arquivo de imagem é obrigatório." });
+      }
+
+      const relativePath = `/uploads/${req.file.filename}`;
+
+      const area = await Area.findByIdAndUpdate(
+        id,
+        { imagemUrl: relativePath },
+        { new: true },
+      );
+
+      res.json(area);
+    } catch (error) {
+      next(error);
+    }
+  },
+);
 
 router.delete("/:id", async (req, res, next) => {
   try {
