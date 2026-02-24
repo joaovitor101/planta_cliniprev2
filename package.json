@@ -1,0 +1,28 @@
+{
+  "name": "planta-cliniprev2-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "echo \"No linter configured\"",
+    "dev:server": "nodemon server/index.js",
+    "dev:all": "npm-run-all --parallel dev dev:server"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "axios": "^1.7.9",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2",
+    "mongoose": "^8.7.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react-swc": "^3.6.0",
+    "vite": "^7.0.0",
+    "nodemon": "^3.1.7",
+    "npm-run-all": "^4.1.5"
+  }
+}
