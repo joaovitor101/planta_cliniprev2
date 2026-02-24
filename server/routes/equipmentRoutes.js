@@ -8,21 +8,7 @@ const router = express.Router();
 
 const uploadDir = path.join(__dirname, "..", "uploads");
 
-router.get("/:id", async (req, res, next) => {
-  try {
-    const { id } = req.params;
 
-    const equipment = await Equipment.findById(id);
-
-    if (!equipment) {
-      return res.status(404).json({ message: "Equipamento não encontrado" });
-    }
-
-    res.json(equipment);
-  } catch (error) {
-    next(error);
-  }
-});
 
 
 if (!fs.existsSync(uploadDir)) {
@@ -89,6 +75,24 @@ router.get("/search", async (req, res, next) => {
     next(error);
   }
 });
+
+
+router.get("/:id", async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const equipment = await Equipment.findById(id);
+
+    if (!equipment) {
+      return res.status(404).json({ message: "Equipamento não encontrado" });
+    }
+
+    res.json(equipment);
+  } catch (error) {
+    next(error);
+  }
+});
+
 
 router.post("/", async (req, res, next) => {
   try {

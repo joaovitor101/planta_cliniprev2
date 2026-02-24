@@ -25,7 +25,7 @@ app.use("/api/units", unitRoutes);
 app.use("/api/floors", floorRoutes);
 app.use("/api/areas", areaRoutes);
 app.use("/api/equipments", equipmentRoutes);
-app.use("/api/equipments/:id", equipmentRoutes);
+
 
 
 // Servir arquivos estáticos do uploads (DEPOIS DAS ROTAS DE API)
