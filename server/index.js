@@ -16,15 +16,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Servir arquivos estáticos do uploads (DEVE VIR ANTES DE SPA FALLBACK)
-app.use(
-  "/uploads",
-  express.static(path.join(__dirname, "uploads"), {
-    maxAge: "7d",
-  }),
-);
-
-// Rotas da API (DEVE VIR ANTES DE SPA FALLBACK)
+// Rotas da API (DEVE VIR PRIMEIRO)
 app.get("/api/health", (_req, res) => {
   res.json({ ok: true, message: "API Planta Cliniprev v2" });
 });
@@ -34,11 +26,19 @@ app.use("/api/floors", floorRoutes);
 app.use("/api/areas", areaRoutes);
 app.use("/api/equipments", equipmentRoutes);
 
+// Servir arquivos estáticos do uploads (DEPOIS DAS ROTAS DE API)
+app.use(
+  "/uploads",
+  express.static(path.join(__dirname, "uploads"), {
+    maxAge: "7d",
+  }),
+);
+
 // Servir build do Vite em produção
 const distPath = path.join(__dirname, "..", "dist");
 app.use(express.static(distPath));
 
-// SPA fallback - redirecionar rotas desconhecidas para index.html
+// SPA fallback - redirecionar rotas desconhecidas para index.html (DEVE VIR POR ÚLTIMO)
 app.get("*", (_req, res) => {
   res.sendFile(path.join(distPath, "index.html"), (err) => {
     if (err) {
