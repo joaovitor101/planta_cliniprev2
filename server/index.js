@@ -16,6 +16,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Servir arquivos estáticos do uploads
 app.use(
   "/uploads",
   express.static(path.join(__dirname, "uploads"), {
@@ -23,6 +24,7 @@ app.use(
   }),
 );
 
+// Rotas da API
 app.get("/api/health", (_req, res) => {
   res.json({ ok: true, message: "API Planta Cliniprev v2" });
 });
@@ -31,6 +33,19 @@ app.use("/api/units", unitRoutes);
 app.use("/api/floors", floorRoutes);
 app.use("/api/areas", areaRoutes);
 app.use("/api/equipments", equipmentRoutes);
+
+// Servir build do Vite em produção
+const distPath = path.join(__dirname, "..", "dist");
+app.use(express.static(distPath));
+
+// SPA fallback - redirecionar rotas desconhecidas para index.html
+app.get("*", (_req, res) => {
+  res.sendFile(path.join(distPath, "index.html"), (err) => {
+    if (err) {
+      res.status(404).json({ error: "Not found" });
+    }
+  });
+});
 
 const PORT = process.env.PORT || 4000;
 
