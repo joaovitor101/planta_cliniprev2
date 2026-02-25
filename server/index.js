@@ -13,17 +13,9 @@ const equipmentRoutes = require("./routes/equipmentRoutes");
 
 const app = express();
 
-app.use(cors({
-  origin: "*",
-  methods: ["GET", "POST", "PUT", "DELETE"],
-}));
-
+app.use(cors());
 app.use(express.json());
 
-app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "*");
-  next();
-});
 // Rotas da API (DEVE VIR PRIMEIRO)
 app.get("/api/health", (_req, res) => {
   res.json({ ok: true, message: "API Planta Cliniprev v2" });
@@ -33,6 +25,7 @@ app.use("/api/units", unitRoutes);
 app.use("/api/floors", floorRoutes);
 app.use("/api/areas", areaRoutes);
 app.use("/api/equipments", equipmentRoutes);
+
 
 
 // Servir arquivos estáticos do uploads (DEPOIS DAS ROTAS DE API)
