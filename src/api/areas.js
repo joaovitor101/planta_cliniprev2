@@ -20,24 +20,11 @@ export async function deleteArea(id) {
 }
 
 export async function uploadAreaImage(id, file) {
-try {
   const formData = new FormData();
-  formData.append("file", file); // name = 'file' como no backend
+  formData.append("file", file);
 
-  const response = await fetch(`/api/areas/${id}/image`, {
-    method: "POST",
-    body: formData,
-  });
+  const { data } = await api.post(`/areas/${id}/image`, formData);
 
-  if (!response.ok) {
-    const errorData = await response.json(); // ou response.text() se não for JSON
-    throw new Error(errorData.message || "Erro ao enviar imagem");
-  }
-
-  const data = await response.json();
-  console.log("Imagem enviada:", data);
-} catch (error) {
-  console.error("Erro no upload:", error.message);
-}
+  return data;
 }
 
