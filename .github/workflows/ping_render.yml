@@ -2,8 +2,8 @@ name: Keep Render Awake
 
 on:
   schedule:
-    # roda a cada 10 minutos (ajuste se quiser)
     - cron: '*/10 * * * *'
+  workflow_dispatch:
 
 jobs:
   ping:
@@ -11,4 +11,4 @@ jobs:
     steps:
       - name: Ping Render app
         run: |
-          curl -fsSL https://planta-cliniprev2.onrender.com/api/health || exit 1
+          curl -fsSL https://planta-cliniprev2.onrender.com/api/health
