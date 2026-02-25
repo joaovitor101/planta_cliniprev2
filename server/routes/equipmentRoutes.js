@@ -115,31 +115,44 @@ router.patch("/:id", async (req, res, next) => {
   }
 });
 
-router.post(
-  "/:id/image",
-  upload.single("file"),
-  async (req, res, next) => {
-    try {
-      const { id } = req.params;
-
-      if (!req.file) {
-        return res.status(400).json({ message: "Arquivo de imagem é obrigatório." });
+router.post("/:id/image", (req, res, next) => {
+  upload.single("file")(req, res, function (err) {
+    if (err instanceof multer.MulterError) {
+      if (err.code === "LIMIT_FILE_SIZE") {
+        return res.status(400).json({
+          message: "Imagem muito grande. Máximo permitido: 5MB.",
+        });
       }
-
-      const relativePath = `/uploads/${req.file.filename}`;
-
-      const equipment = await Equipment.findByIdAndUpdate(
-        id,
-        { imagemUrl: relativePath },
-        { new: true },
-      );
-
-      res.json(equipment);
-    } catch (error) {
-      next(error);
+      return res.status(400).json({ message: err.message });
+    } else if (err) {
+      return res.status(500).json({ message: "Erro no upload." });
     }
-  },
-);
+
+    next();
+  });
+}, async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    if (!req.file) {
+      return res.status(400).json({
+        message: "Arquivo de imagem é obrigatório.",
+      });
+    }
+
+    const relativePath = `/uploads/${req.file.filename}`;
+
+    const equipment = await Equipment.findByIdAndUpdate(
+      id,
+      { imagemUrl: relativePath },
+      { new: true }
+    );
+
+    res.json(equipment);
+  } catch (error) {
+    next(error);
+  }
+});
 
 router.delete("/:id", async (req, res, next) => {
   try {
