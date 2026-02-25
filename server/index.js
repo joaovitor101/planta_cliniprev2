@@ -41,12 +41,13 @@ const distPath = path.join(__dirname, "..", "dist");
 app.use(express.static(distPath));
 
 // SPA fallback - redirecionar rotas desconhecidas para index.html (DEVE VIR POR ÚLTIMO)
-app.get("*", (_req, res) => {
-  res.sendFile(path.join(distPath, "index.html"), (err) => {
-    if (err) {
-      res.status(404).json({ error: "Not found" });
-    }
-  });
+// SPA fallback - SOMENTE para rotas que NÃO começam com /api
+app.get("*", (req, res) => {
+  if (req.originalUrl.startsWith("/api")) {
+    return res.status(404).json({ error: "Rota da API não encontrada" });
+  }
+
+  res.sendFile(path.join(distPath, "index.html"));
 });
 
 const PORT = process.env.PORT || 4000;
