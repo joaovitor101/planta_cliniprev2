@@ -37,6 +37,10 @@ const areaSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    printers: {
+      type: [String],
+      default: [],
+    },
   },
   { timestamps: true },
 );

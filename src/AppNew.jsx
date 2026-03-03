@@ -298,7 +298,12 @@ export default function AppNew() {
 
   const handleSaveArea = async () => {
     if (!editingArea?.id) return;
-    const updated = await safeRun(() => patchArea(editingArea.id, { name: editingArea.name }));
+    const updated = await safeRun(() =>
+      patchArea(editingArea.id, {
+        name: editingArea.name,
+        printers: editingArea.printers || [],
+      }),
+    );
     const a = withId(updated);
     setEditingArea(a);
     setAreas((prev) => prev.map((x) => (x.id === a.id ? a : x)));
@@ -632,7 +637,12 @@ export default function AppNew() {
             setIsAreaModalOpen(false);
             setEditingArea(null);
           }}
-          onUpdateAreaName={(name) => setEditingArea((prev) => ({ ...prev, name }))}
+          onUpdateAreaName={(name) =>
+            setEditingArea((prev) => (prev ? { ...prev, name } : prev))
+          }
+          onUpdateAreaPrinters={(printers) =>
+            setEditingArea((prev) => (prev ? { ...prev, printers } : prev))
+          }
           onSaveArea={handleSaveArea}
           onDeleteArea={handleDeleteArea}
           equipments={equipments}
@@ -657,6 +667,7 @@ function AreaModal({
   area,
   onClose,
   onUpdateAreaName,
+  onUpdateAreaPrinters,
   onSaveArea,
   onDeleteArea,
   equipments,
@@ -695,6 +706,25 @@ function AreaModal({
               className="field-input"
               value={area.name}
               onChange={(event) => onUpdateAreaName(event.target.value)}
+            />
+          </div>
+
+          <div className="field-group">
+            <label className="field-label" htmlFor="area-printers">
+              Impressoras da área (uma por linha)
+            </label>
+            <textarea
+              id="area-printers"
+              className="field-textarea"
+              value={(area.printers || []).join("\n")}
+              onChange={(event) => {
+                const lines = event.target.value
+                  .split("\n")
+                  .map((line) => line.trim())
+                  .filter(Boolean);
+                onUpdateAreaPrinters(lines);
+              }}
+              placeholder="Exemplo:\nHP LaserJet 123\nBrother XYZ"
             />
           </div>
 
