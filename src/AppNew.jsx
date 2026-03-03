@@ -298,13 +298,12 @@ export default function AppNew() {
 
   const handleSaveArea = async () => {
     if (!editingArea?.id) return;
-    const updated = await safeRun(() =>
-      patchArea(editingArea.id, {
-        name: editingArea.name,
-        printers: editingArea.printers || [],
-      }),
-    );
-    const a = withId(updated);
+    const payload = {
+      name: editingArea.name,
+      printers: editingArea.printers || [],
+    };
+    const updated = await safeRun(() => patchArea(editingArea.id, payload));
+    const a = { ...withId(updated), printers: payload.printers };
     setEditingArea(a);
     setAreas((prev) => prev.map((x) => (x.id === a.id ? a : x)));
   };
