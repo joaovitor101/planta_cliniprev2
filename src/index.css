@@ -192,7 +192,7 @@ body {
 
 .area-card {
   position: absolute;
-  background: #e5e7eb;
+  background: #dbeafe;
   border-radius: 10px;
   padding: 12px;
   min-width: 180px;
@@ -220,7 +220,7 @@ body {
   height: 16px;
   border-radius: 6px;
   border: 1px solid #9ca3af;
-  background: #e5e7eb;
+  background: #bfdbfe;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -232,8 +232,8 @@ body {
 
 .texto-card {
   position: absolute;
-  background: rgba(229, 231, 235, 0.55);
-  border: 1px dashed rgba(156, 163, 175, 0.8);
+  background: rgba(254, 243, 199, 0.7); /* amber-100 */
+  border: 1px dashed rgba(245, 158, 11, 0.75); /* amber-500 */
   border-radius: 10px;
   padding: 10px 12px;
   display: flex;
@@ -242,18 +242,18 @@ body {
   text-align: left;
   cursor: pointer;
   overflow: hidden;
+  color: #111827;
   box-shadow: 0 12px 20px rgba(15, 23, 42, 0.08);
   transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
 }
 
 .texto-card:hover {
-  background: rgba(224, 231, 255, 0.65);
   transform: translateY(-2px);
   box-shadow: 0 18px 30px rgba(79, 70, 229, 0.14);
 }
 
 .texto-card.selected {
-  outline: 2px solid #4f46e5;
+  outline: 2px solid transparent;
   outline-offset: 2px;
 }
 
@@ -265,14 +265,37 @@ body {
   line-height: 1.2;
 }
 
+.color-picker-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.color-swatch {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.9);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.55), 0 10px 20px rgba(15, 23, 42, 0.06);
+  cursor: pointer;
+  padding: 0;
+}
+
+.color-input-hidden {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  width: 1px;
+  height: 1px;
+}
+
 .area-card:hover {
-  background: #e0e7ff;
   transform: translateY(-2px);
   box-shadow: 0 18px 30px rgba(79, 70, 229, 0.22);
 }
 
 .area-card.selected {
-  outline: 2px solid #4f46e5;
+  outline: 2px solid transparent;
   outline-offset: 2px;
 }
 

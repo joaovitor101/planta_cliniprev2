@@ -49,6 +49,24 @@ function buildImageUrl(path) {
   return `${uploadsBaseUrl}${path}`;
 }
 
+function hexToRgba(hex, alpha = 1) {
+  if (!hex || typeof hex !== "string") return `rgba(0,0,0,${alpha})`;
+  const cleaned = hex.trim().replace("#", "");
+  if (cleaned.length === 3) {
+    const r = parseInt(cleaned[0] + cleaned[0], 16);
+    const g = parseInt(cleaned[1] + cleaned[1], 16);
+    const b = parseInt(cleaned[2] + cleaned[2], 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }
+  if (cleaned.length === 6) {
+    const r = parseInt(cleaned.slice(0, 2), 16);
+    const g = parseInt(cleaned.slice(2, 4), 16);
+    const b = parseInt(cleaned.slice(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }
+  return `rgba(0,0,0,${alpha})`;
+}
+
 export default function AppNew() {
   const [units, setUnits] = useState([]);
   const [floors, setFloors] = useState([]);
@@ -329,6 +347,7 @@ export default function AppNew() {
         y: 220,
         width: 220,
         height: 120,
+        color: "#dbeafe",
       }),
     );
     const a = withId(created);
@@ -341,11 +360,22 @@ export default function AppNew() {
     const payload = {
       name: editingArea.name,
       printers: editingArea.printers || [],
+      color: editingArea.color || "#dbeafe",
     };
     const updated = await safeRun(() => patchArea(editingArea.id, payload));
     const a = { ...withId(updated), printers: payload.printers };
     setEditingArea(a);
     setAreas((prev) => prev.map((x) => (x.id === a.id ? a : x)));
+  };
+
+  const handleUpdateAreaColorLocal = (value) => {
+    if (!editingArea) return;
+    setEditingArea((prev) => (prev ? { ...prev, color: value } : prev));
+    setAreas((prev) => prev.map((a) => (a.id === editingArea.id ? { ...a, color: value } : a)));
+  };
+
+  const handleResetAreaColorLocal = () => {
+    handleUpdateAreaColorLocal("#dbeafe");
   };
 
   const handleDeleteArea = async () => {
@@ -384,6 +414,7 @@ export default function AppNew() {
         width: 220,
         height: 60,
         fontSize: 14,
+        color: "#f59e0b",
       }),
     );
     const t = withId(created);
@@ -405,11 +436,22 @@ export default function AppNew() {
     setTextos((prev) => prev.map((t) => (t.id === editingTexto.id ? { ...t, fontSize: n } : t)));
   };
 
+  const handleUpdateTextoColorLocal = (value) => {
+    if (!editingTexto) return;
+    setEditingTexto((prev) => (prev ? { ...prev, color: value } : prev));
+    setTextos((prev) => prev.map((t) => (t.id === editingTexto.id ? { ...t, color: value } : t)));
+  };
+
+  const handleResetTextoColorLocal = () => {
+    handleUpdateTextoColorLocal("#dbeafe");
+  };
+
   const handleSaveTexto = async () => {
     if (!editingTexto?.id) return;
     const payload = {
       text: editingTexto.text ?? "",
       fontSize: editingTexto.fontSize ?? 14,
+      color: editingTexto.color || "#f59e0b",
     };
     const updated = await safeRun(() => patchText(editingTexto.id, payload));
     const t = withId(updated);
@@ -748,6 +790,8 @@ export default function AppNew() {
                     top: `${area.y || 0}px`,
                     width: `${area.width || 220}px`,
                     height: `${area.height || 120}px`,
+                    backgroundColor: area.color || undefined,
+                    outlineColor: area.color || undefined,
                   }}
                   onClick={() => {
                     if (isEditMode) return;
@@ -780,6 +824,9 @@ export default function AppNew() {
                     top: `${texto.y || 0}px`,
                     width: `${texto.width || 220}px`,
                     height: `${texto.height || 60}px`,
+                    backgroundColor: hexToRgba(texto.color || "#f59e0b", 0.25),
+                    borderColor: hexToRgba(texto.color || "#f59e0b", 0.9),
+                    outlineColor: texto.color || undefined,
                   }}
                   onClick={() => {
                     if (isEditMode) return;
@@ -859,6 +906,8 @@ export default function AppNew() {
           onUpdateAreaPrinters={(printers) =>
             setEditingArea((prev) => (prev ? { ...prev, printers } : prev))
           }
+          onUpdateAreaColor={(value) => handleUpdateAreaColorLocal(value)}
+          onResetAreaColor={handleResetAreaColorLocal}
           onSaveArea={handleSaveArea}
           onDeleteArea={handleDeleteArea}
           equipments={equipments}
@@ -885,6 +934,8 @@ export default function AppNew() {
           }}
           onUpdateTextoText={(value) => handleUpdateTextoTextLocal(value)}
           onUpdateTextoFontSize={(value) => handleUpdateTextoFontSizeLocal(value)}
+          onUpdateTextoColor={(value) => handleUpdateTextoColorLocal(value)}
+          onResetTextoColor={handleResetTextoColorLocal}
           onSaveTexto={handleSaveTexto}
           onDeleteTexto={handleDeleteTexto}
         />
@@ -900,6 +951,8 @@ function AreaModal({
   onClose,
   onUpdateAreaName,
   onUpdateAreaPrinters,
+  onUpdateAreaColor,
+  onResetAreaColor,
   onSaveArea,
   onDeleteArea,
   equipments,
@@ -913,6 +966,8 @@ function AreaModal({
           isEditingEquipment,
           onUploadAreaImage,
 }) {
+  const colorInputRef = useRef(null);
+
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" onClick={(event) => event.stopPropagation()}>
@@ -939,6 +994,45 @@ function AreaModal({
               value={area.name}
               onChange={(event) => onUpdateAreaName(event.target.value)}
             />
+          </div>
+
+          <div className="field-group">
+            <label className="field-label" htmlFor="area-color">
+              Cor da caixinha
+            </label>
+            <div className="color-picker-row">
+              <button
+                type="button"
+                className="color-swatch"
+                aria-label="Escolher cor"
+                onClick={() => colorInputRef.current?.click()}
+                style={{ backgroundColor: area.color || "#dbeafe" }}
+              />
+              <input
+                ref={colorInputRef}
+                id="area-color"
+                type="color"
+                value={area.color || "#dbeafe"}
+                onChange={(event) => onUpdateAreaColor(event.target.value)}
+                className="color-input-hidden"
+              />
+              <button
+                type="button"
+                className="button button-ghost"
+                onClick={() => colorInputRef.current?.click()}
+                style={{ paddingInline: 14 }}
+              >
+                Escolher
+              </button>
+            </div>
+            <button
+              type="button"
+              className="button button-ghost"
+              onClick={onResetAreaColor}
+              style={{ marginTop: 6, width: "fit-content" }}
+            >
+              Voltar para azul padrão
+            </button>
           </div>
 
           <div className="field-group">
@@ -1225,9 +1319,13 @@ function TextoModal({
   onClose,
   onUpdateTextoText,
   onUpdateTextoFontSize,
+  onUpdateTextoColor,
+  onResetTextoColor,
   onSaveTexto,
   onDeleteTexto,
 }) {
+  const colorInputRef = useRef(null);
+
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" onClick={(event) => event.stopPropagation()}>
@@ -1270,6 +1368,45 @@ function TextoModal({
               value={texto.fontSize ?? 14}
               onChange={(event) => onUpdateTextoFontSize(event.target.value)}
             />
+          </div>
+
+          <div className="field-group">
+            <label className="field-label" htmlFor="texto-color">
+              Cor da caixinha
+            </label>
+            <div className="color-picker-row">
+              <button
+                type="button"
+                className="color-swatch"
+                aria-label="Escolher cor"
+                onClick={() => colorInputRef.current?.click()}
+                style={{ backgroundColor: texto.color || "#f59e0b" }}
+              />
+              <input
+                ref={colorInputRef}
+                id="texto-color"
+                type="color"
+                value={texto.color || "#f59e0b"}
+                onChange={(event) => onUpdateTextoColor(event.target.value)}
+                className="color-input-hidden"
+              />
+              <button
+                type="button"
+                className="button button-ghost"
+                onClick={() => colorInputRef.current?.click()}
+                style={{ paddingInline: 14 }}
+              >
+                Escolher
+              </button>
+            </div>
+            <button
+              type="button"
+              className="button button-ghost"
+              onClick={onResetTextoColor}
+              style={{ marginTop: 6, width: "fit-content" }}
+            >
+              Voltar para azul padrão
+            </button>
           </div>
         </section>
 

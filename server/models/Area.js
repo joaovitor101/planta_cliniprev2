@@ -41,6 +41,11 @@ const areaSchema = new mongoose.Schema(
       type: [String],
       default: [],
     },
+    color: {
+      type: String,
+      default: "#dbeafe", // blue-100
+      trim: true,
+    },
   },
   { timestamps: true },
 );

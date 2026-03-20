@@ -37,6 +37,11 @@ const textoSchema = new mongoose.Schema(
       type: Number,
       default: 14,
     },
+    color: {
+      type: String,
+      default: "#f59e0b", // amber-500
+      trim: true,
+    },
   },
   { timestamps: true },
 );
