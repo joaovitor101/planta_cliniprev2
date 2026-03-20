@@ -9,6 +9,7 @@ const { connectDb } = require("./lib/db");
 const unitRoutes = require("./routes/unitRoutes");
 const floorRoutes = require("./routes/floorRoutes");
 const areaRoutes = require("./routes/areaRoutes");
+const textRoutes = require("./routes/textRoutes");
 const equipmentRoutes = require("./routes/equipmentRoutes");
 
 const app = express();
@@ -24,6 +25,7 @@ app.get("/api/health", (_req, res) => {
 app.use("/api/units", unitRoutes);
 app.use("/api/floors", floorRoutes);
 app.use("/api/areas", areaRoutes);
+app.use("/api/texts", textRoutes);
 app.use("/api/equipments", equipmentRoutes);
 
 

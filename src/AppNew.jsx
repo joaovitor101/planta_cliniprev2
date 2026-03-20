@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createUnit, listUnits } from "./api/units";
 import { createFloor, listFloors } from "./api/floors";
 import { createArea, deleteArea, listAreas, patchArea, uploadAreaImage } from "./api/areas";
+import { createText, deleteText, listTexts, patchText } from "./api/texts";
 import {
   createEquipment,
   deleteEquipment,
@@ -52,13 +53,18 @@ export default function AppNew() {
   const [units, setUnits] = useState([]);
   const [floors, setFloors] = useState([]);
   const [areas, setAreas] = useState([]);
+  const [textos, setTextos] = useState([]);
 
   const [selectedUnitId, setSelectedUnitId] = useState("");
   const [selectedFloorId, setSelectedFloorId] = useState("");
   const [selectedAreaId, setSelectedAreaId] = useState("");
+  const [selectedTextoId, setSelectedTextoId] = useState("");
 
   const [isAreaModalOpen, setIsAreaModalOpen] = useState(false);
   const [editingArea, setEditingArea] = useState(null);
+
+  const [isTextoModalOpen, setIsTextoModalOpen] = useState(false);
+  const [editingTexto, setEditingTexto] = useState(null);
 
   const [equipments, setEquipments] = useState([]);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -73,6 +79,7 @@ export default function AppNew() {
     units: false,
     floors: false,
     areas: false,
+    textos: false,
     equipments: false,
   });
   const [errorMsg, setErrorMsg] = useState("");
@@ -91,7 +98,8 @@ export default function AppNew() {
 
   const dragRef = useRef({
     active: false,
-    areaId: "",
+    itemType: "area", // "area" | "texto"
+    itemId: "",
     pointerId: null,
     startX: 0,
     startY: 0,
@@ -165,6 +173,23 @@ export default function AppNew() {
     }
   }
 
+  async function loadTextos({ unitId, floorId } = {}) {
+    if (!unitId || !floorId) {
+      setTextos([]);
+      return [];
+    }
+
+    setLoading((p) => ({ ...p, textos: true }));
+    try {
+      const data = await safeRun(() => listTexts({ unitId, floorId }));
+      const list = normalizeList(data);
+      setTextos(list);
+      return list;
+    } finally {
+      setLoading((p) => ({ ...p, textos: false }));
+    }
+  }
+
   async function loadEquipments({ areaId } = {}) {
     if (!areaId) {
       setEquipments([]);
@@ -191,7 +216,14 @@ export default function AppNew() {
     if (!selectedUnitId) {
       setFloors([]);
       setAreas([]);
+      setTextos([]);
       setSelectedFloorId("");
+      setSelectedAreaId("");
+      setSelectedTextoId("");
+      setIsAreaModalOpen(false);
+      setEditingArea(null);
+      setIsTextoModalOpen(false);
+      setEditingTexto(null);
       return;
     }
     loadFloors({ unitId: selectedUnitId });
@@ -202,8 +234,12 @@ export default function AppNew() {
     setSelectedAreaId("");
     setIsAreaModalOpen(false);
     setEditingArea(null);
+    setSelectedTextoId("");
+    setIsTextoModalOpen(false);
+    setEditingTexto(null);
     setEquipments([]);
     loadAreas({ unitId: selectedUnitId, floorId: selectedFloorId });
+    loadTextos({ unitId: selectedUnitId, floorId: selectedFloorId });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedFloorId, selectedUnitId]);
 
@@ -241,6 +277,10 @@ export default function AppNew() {
   };
 
   const handleOpenAreaModal = async (area) => {
+    setIsTextoModalOpen(false);
+    setEditingTexto(null);
+    setSelectedTextoId("");
+
     const a = withId(area);
     setEditingArea(a);
     setSelectedAreaId(a.id);
@@ -317,6 +357,75 @@ export default function AppNew() {
     setEditingArea(null);
     setSelectedAreaId("");
     await loadAreas({ unitId: selectedUnitId, floorId: selectedFloorId });
+  };
+
+  const handleOpenTextoModal = (texto) => {
+    setIsAreaModalOpen(false);
+    setEditingArea(null);
+    setSelectedAreaId("");
+    setEquipments([]);
+    setEditingEquipmentId(null);
+
+    const t = withId(texto);
+    setEditingTexto(t);
+    setSelectedTextoId(t.id);
+    setIsTextoModalOpen(true);
+  };
+
+  const handleAddTexto = async () => {
+    if (!selectedUnitId || !selectedFloorId) return;
+    const created = await safeRun(() =>
+      createText({
+        unitId: selectedUnitId,
+        floorId: selectedFloorId,
+        text: "Novo texto",
+        x: 380,
+        y: 220,
+        width: 220,
+        height: 60,
+        fontSize: 14,
+      }),
+    );
+    const t = withId(created);
+    await loadTextos({ unitId: selectedUnitId, floorId: selectedFloorId });
+    handleOpenTextoModal(t);
+  };
+
+  const handleUpdateTextoTextLocal = (value) => {
+    if (!editingTexto) return;
+    setEditingTexto((prev) => (prev ? { ...prev, text: value } : prev));
+    setTextos((prev) => prev.map((t) => (t.id === editingTexto.id ? { ...t, text: value } : t)));
+  };
+
+  const handleUpdateTextoFontSizeLocal = (value) => {
+    if (!editingTexto) return;
+    const n = Number(value);
+    if (!Number.isFinite(n)) return;
+    setEditingTexto((prev) => (prev ? { ...prev, fontSize: n } : prev));
+    setTextos((prev) => prev.map((t) => (t.id === editingTexto.id ? { ...t, fontSize: n } : t)));
+  };
+
+  const handleSaveTexto = async () => {
+    if (!editingTexto?.id) return;
+    const payload = {
+      text: editingTexto.text ?? "",
+      fontSize: editingTexto.fontSize ?? 14,
+    };
+    const updated = await safeRun(() => patchText(editingTexto.id, payload));
+    const t = withId(updated);
+    setEditingTexto(t);
+    setTextos((prev) => prev.map((x) => (x.id === t.id ? t : x)));
+  };
+
+  const handleDeleteTexto = async () => {
+    if (!editingTexto?.id) return;
+    const ok = window.confirm("Deseja excluir este texto?");
+    if (!ok) return;
+    await safeRun(() => deleteText(editingTexto.id));
+    setIsTextoModalOpen(false);
+    setEditingTexto(null);
+    setSelectedTextoId("");
+    await loadTextos({ unitId: selectedUnitId, floorId: selectedFloorId });
   };
 
   const handleAddEquipment = async () => {
@@ -397,12 +506,13 @@ export default function AppNew() {
     }));
   };
 
-  const beginDrag = (event, area, mode = "move") => {
+  const beginDragArea = (event, area, mode = "move") => {
     if (!isEditMode) return;
     const a = withId(area);
     dragRef.current = {
       active: true,
-      areaId: a.id,
+      itemType: "area",
+      itemId: a.id,
       pointerId: event.pointerId,
       startX: event.clientX,
       startY: event.clientY,
@@ -416,22 +526,64 @@ export default function AppNew() {
     event.currentTarget.setPointerCapture(event.pointerId);
   };
 
+  const beginDragTexto = (event, texto, mode = "move") => {
+    if (!isEditMode) return;
+    const t = withId(texto);
+    dragRef.current = {
+      active: true,
+      itemType: "texto",
+      itemId: t.id,
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      originX: t.x || 0,
+      originY: t.y || 0,
+      originWidth: t.width || 220,
+      originHeight: t.height || 60,
+      mode,
+    };
+    setSelectedTextoId(t.id);
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
   const onDragMove = (event) => {
     if (!isEditMode) return;
     const d = dragRef.current;
     if (!d.active || d.pointerId !== event.pointerId) return;
+
     const dx = event.clientX - d.startX;
     const dy = event.clientY - d.startY;
-    setAreas((prev) =>
-      prev.map((a) => {
-        if (a.id !== d.areaId) return a;
+
+    if (d.itemType === "area") {
+      setAreas((prev) =>
+        prev.map((a) => {
+          if (a.id !== d.itemId) return a;
+          if (d.mode === "resize") {
+            const nextWidth = Math.max(120, d.originWidth + dx);
+            const nextHeight = Math.max(80, d.originHeight + dy);
+            return { ...a, width: nextWidth, height: nextHeight };
+          }
+          return {
+            ...a,
+            x: Math.max(0, d.originX + dx),
+            y: Math.max(0, d.originY + dy),
+          };
+        }),
+      );
+      return;
+    }
+
+    // texto
+    setTextos((prev) =>
+      prev.map((t) => {
+        if (t.id !== d.itemId) return t;
         if (d.mode === "resize") {
-          const nextWidth = Math.max(120, d.originWidth + dx);
-          const nextHeight = Math.max(80, d.originHeight + dy);
-          return { ...a, width: nextWidth, height: nextHeight };
+          const nextWidth = Math.max(80, d.originWidth + dx);
+          const nextHeight = Math.max(24, d.originHeight + dy);
+          return { ...t, width: nextWidth, height: nextHeight };
         }
         return {
-          ...a,
+          ...t,
           x: Math.max(0, d.originX + dx),
           y: Math.max(0, d.originY + dy),
         };
@@ -444,14 +596,31 @@ export default function AppNew() {
     const d = dragRef.current;
     if (!d.active || d.pointerId !== event.pointerId) return;
     dragRef.current.active = false;
-    const area = areas.find((a) => a.id === d.areaId);
-    if (!area) return;
+
+    if (d.itemType === "area") {
+      const area = areas.find((a) => a.id === d.itemId);
+      if (!area) return;
+      if (d.mode === "resize") {
+        await safeRun(() =>
+          patchArea(area.id, { width: area.width || 220, height: area.height || 120 }),
+        );
+      } else {
+        await safeRun(() => patchArea(area.id, { x: area.x, y: area.y }));
+      }
+      return;
+    }
+
+    const texto = textos.find((t) => t.id === d.itemId);
+    if (!texto) return;
     if (d.mode === "resize") {
       await safeRun(() =>
-        patchArea(area.id, { width: area.width || 220, height: area.height || 120 }),
+        patchText(texto.id, {
+          width: texto.width || 220,
+          height: texto.height || 60,
+        }),
       );
     } else {
-      await safeRun(() => patchArea(area.id, { x: area.x, y: area.y }));
+      await safeRun(() => patchText(texto.id, { x: texto.x, y: texto.y }));
     }
   };
 
@@ -561,44 +730,83 @@ export default function AppNew() {
             <div className="empty-state">Crie ou selecione uma unidade.</div>
           ) : !selectedFloorId ? (
             <div className="empty-state">Crie ou selecione um andar.</div>
-          ) : loading.areas ? (
-            <div className="empty-state">Carregando áreas...</div>
-          ) : areas.length === 0 ? (
+          ) : loading.areas || loading.textos ? (
+            <div className="empty-state">Carregando itens...</div>
+          ) : areas.length === 0 && textos.length === 0 ? (
             <div className="empty-state">
-              Nenhuma área neste andar. Clique em &quot;Adicionar área&quot;.
+              Nenhum item neste andar. Clique em &quot;Adicionar área&quot; ou &quot;+ Texto&quot;.
             </div>
           ) : (
-            areas.map((area) => (
-              <button
-                key={area.id}
-                type="button"
-                className={"area-card" + (area.id === selectedAreaId ? " selected" : "")}
-                style={{
-                  left: `${area.x || 0}px`,
-                  top: `${area.y || 0}px`,
-                  width: `${area.width || 220}px`,
-                  height: `${area.height || 120}px`,
-                }}
-                onClick={() => {
-                  if (isEditMode) return;
-                  handleOpenAreaModal(area);
-                }}
-                onPointerDown={(e) => beginDrag(e, area, "move")}
-              >
-                <span className="area-name">{area.name}</span>
-                {isEditMode ? (
+            <>
+              {areas.map((area) => (
+                <button
+                  key={area.id}
+                  type="button"
+                  className={"area-card" + (area.id === selectedAreaId ? " selected" : "")}
+                  style={{
+                    left: `${area.x || 0}px`,
+                    top: `${area.y || 0}px`,
+                    width: `${area.width || 220}px`,
+                    height: `${area.height || 120}px`,
+                  }}
+                  onClick={() => {
+                    if (isEditMode) return;
+                    handleOpenAreaModal(area);
+                  }}
+                  onPointerDown={(e) => beginDragArea(e, area, "move")}
+                >
+                  <span className="area-name">{area.name}</span>
+                  {isEditMode ? (
+                    <span
+                      className="area-resize-handle"
+                      onPointerDown={(event) => {
+                        event.stopPropagation();
+                        beginDragArea(event, area, "resize");
+                      }}
+                    >
+                      ⤢
+                    </span>
+                  ) : null}
+                </button>
+              ))}
+
+              {textos.map((texto) => (
+                <button
+                  key={texto.id}
+                  type="button"
+                  className={"texto-card" + (texto.id === selectedTextoId ? " selected" : "")}
+                  style={{
+                    left: `${texto.x || 0}px`,
+                    top: `${texto.y || 0}px`,
+                    width: `${texto.width || 220}px`,
+                    height: `${texto.height || 60}px`,
+                  }}
+                  onClick={() => {
+                    if (isEditMode) return;
+                    handleOpenTextoModal(texto);
+                  }}
+                  onPointerDown={(e) => beginDragTexto(e, texto, "move")}
+                >
                   <span
-                    className="area-resize-handle"
-                    onPointerDown={(event) => {
-                      event.stopPropagation();
-                      beginDrag(event, area, "resize");
-                    }}
+                    className="texto-content"
+                    style={{ fontSize: `${texto.fontSize || 14}px` }}
                   >
-                    ⤢
+                    {texto.text || ""}
                   </span>
-                ) : null}
-              </button>
-            ))
+                  {isEditMode ? (
+                    <span
+                      className="area-resize-handle"
+                      onPointerDown={(event) => {
+                        event.stopPropagation();
+                        beginDragTexto(event, texto, "resize");
+                      }}
+                    >
+                      ⤢
+                    </span>
+                  ) : null}
+                </button>
+              ))}
+            </>
           )}
         </div>
 
@@ -623,6 +831,15 @@ export default function AppNew() {
             disabled={!selectedUnitId}
           >
             + Andar
+          </button>
+
+          <button
+            type="button"
+            className="button button-ghost"
+            onClick={handleAddTexto}
+            disabled={!selectedUnitId || !selectedFloorId}
+          >
+            + Texto
           </button>
         </div>
       </main>
@@ -654,6 +871,22 @@ export default function AppNew() {
           onCancelEditEquipment={handleCancelEditEquipment}
           isEditingEquipment={Boolean(editingEquipmentId)}
           onUploadAreaImage={handleUploadAreaImage}
+        />
+      ) : null}
+
+      {isTextoModalOpen && editingTexto ? (
+        <TextoModal
+          unitName={currentUnit?.name ?? ""}
+          floorName={currentFloor?.name ?? ""}
+          texto={editingTexto}
+          onClose={() => {
+            setIsTextoModalOpen(false);
+            setEditingTexto(null);
+          }}
+          onUpdateTextoText={(value) => handleUpdateTextoTextLocal(value)}
+          onUpdateTextoFontSize={(value) => handleUpdateTextoFontSizeLocal(value)}
+          onSaveTexto={handleSaveTexto}
+          onDeleteTexto={handleDeleteTexto}
         />
       ) : null}
     </div>
@@ -979,6 +1212,77 @@ function AreaModal({
               Salvar equipamento
             </button>
           )}
+        </footer>
+      </div>
+    </div>
+  );
+}
+
+function TextoModal({
+  unitName,
+  floorName,
+  texto,
+  onClose,
+  onUpdateTextoText,
+  onUpdateTextoFontSize,
+  onSaveTexto,
+  onDeleteTexto,
+}) {
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal" onClick={(event) => event.stopPropagation()}>
+        <header className="modal-header">
+          <div>
+            <div className="modal-title">Informações do texto</div>
+            <div className="equipment-meta">
+              {unitName} · {floorName}
+            </div>
+          </div>
+          <button type="button" className="button button-ghost" onClick={onClose}>
+            Fechar
+          </button>
+        </header>
+
+        <section className="modal-body">
+          <div className="field-group">
+            <label className="field-label" htmlFor="texto-content">
+              Conteúdo (multilinha)
+            </label>
+            <textarea
+              id="texto-content"
+              className="field-textarea"
+              value={texto.text || ""}
+              onChange={(event) => onUpdateTextoText(event.target.value)}
+              placeholder={"Digite aqui...\nEx: Linha 1\nLinha 2"}
+            />
+          </div>
+
+          <div className="field-group">
+            <label className="field-label" htmlFor="texto-fontSize">
+              Tamanho da fonte (px)
+            </label>
+            <input
+              id="texto-fontSize"
+              type="number"
+              min={6}
+              max={200}
+              className="field-input"
+              value={texto.fontSize ?? 14}
+              onChange={(event) => onUpdateTextoFontSize(event.target.value)}
+            />
+          </div>
+        </section>
+
+        <footer className="modal-footer">
+          <button type="button" className="button button-ghost" onClick={onDeleteTexto}>
+            Excluir texto
+          </button>
+          <button type="button" className="button button-ghost" onClick={onClose}>
+            Fechar
+          </button>
+          <button type="button" className="button button-primary" onClick={onSaveTexto}>
+            Salvar texto
+          </button>
         </footer>
       </div>
     </div>

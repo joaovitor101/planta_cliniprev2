@@ -230,6 +230,41 @@ body {
   box-shadow: 0 2px 4px rgba(15, 23, 42, 0.2);
 }
 
+.texto-card {
+  position: absolute;
+  background: rgba(229, 231, 235, 0.55);
+  border: 1px dashed rgba(156, 163, 175, 0.8);
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  box-shadow: 0 12px 20px rgba(15, 23, 42, 0.08);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+}
+
+.texto-card:hover {
+  background: rgba(224, 231, 255, 0.65);
+  transform: translateY(-2px);
+  box-shadow: 0 18px 30px rgba(79, 70, 229, 0.14);
+}
+
+.texto-card.selected {
+  outline: 2px solid #4f46e5;
+  outline-offset: 2px;
+}
+
+.texto-content {
+  pointer-events: none;
+  white-space: pre-wrap; /* respeita \n e faz auto-wrap pelo width */
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  line-height: 1.2;
+}
+
 .area-card:hover {
   background: #e0e7ff;
   transform: translateY(-2px);
