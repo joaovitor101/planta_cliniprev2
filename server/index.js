@@ -11,6 +11,8 @@ const floorRoutes = require("./routes/floorRoutes");
 const areaRoutes = require("./routes/areaRoutes");
 const textRoutes = require("./routes/textRoutes");
 const equipmentRoutes = require("./routes/equipmentRoutes");
+const authRoutes = require("./routes/authRoutes");
+const { requireAuth } = require("./middlewares/requireAuth");
 
 const app = express();
 
@@ -21,6 +23,12 @@ app.use(express.json());
 app.get("/api/health", (_req, res) => {
   res.json({ ok: true, message: "API Planta Cliniprev v2" });
 });
+
+app.use("/api/auth", authRoutes);
+
+// Protege o restante das rotas da API.
+// Obs: como montamos as rotas públicas antes, `/api/auth` e `/api/health` ficam abertas.
+app.use("/api", requireAuth);
 
 app.use("/api/units", unitRoutes);
 app.use("/api/floors", floorRoutes);

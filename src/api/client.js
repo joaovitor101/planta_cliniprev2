@@ -23,3 +23,28 @@ export const api = axios.create({
   timeout: 20000,
 });
 
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem("authToken");
+  if (token) {
+    config.headers = config.headers || {};
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error?.response?.status;
+    if (status === 401) {
+      const token = localStorage.getItem("authToken");
+      if (token) {
+        localStorage.removeItem("authToken");
+        // Recarrega para levar o usuário de volta para a tela de login.
+        window.location.reload();
+      }
+    }
+    return Promise.reject(error);
+  },
+);
+
