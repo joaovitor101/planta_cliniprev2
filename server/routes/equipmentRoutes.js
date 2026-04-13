@@ -76,6 +76,81 @@ router.get("/search", async (req, res, next) => {
   }
 });
 
+router.get("/export/csv", async (req, res, next) => {
+  try {
+    // 1. Buscamos todos os equipamentos populando a Árvore de Localização (Área -> Andar / Unidade)
+    const equipments = await Equipment.find()
+      .populate({
+        path: "areaId",
+        populate: [
+          { path: "unitId", select: "name" },
+          { path: "floorId", select: "name" },
+        ],
+      })
+      .sort({ createdAt: 1 });
+
+    // 2. Definimos os Cabeçalhos Organizadinhos
+    const headers = [
+      "ID",
+      "Unidade",
+      "Andar",
+      "Área",
+      "Tipo",
+      "Nome da Máquina",
+      "Proprietário",
+      "Usuário Logado",
+      "Anydesk",
+      "Kaspersky",
+      "Armazenamento Livre",
+      "Status",
+      "Observações",
+      "Data de Cadastro"
+    ];
+
+    // Função utilitária para garantir que quebras de linha e ponto-e-vírgulas no texto não quebrem o Excel
+    const escapeCsv = (text) => {
+      if (!text) return "";
+      const str = String(text).replace(/"/g, '""');
+      return `"${str}"`;
+    };
+
+    // 3. Montamos as Linhas do Relatório
+    const rows = equipments.map(eq => {
+      const area = eq.areaId || {};
+      const unitName = area.unitId ? area.unitId.name : "N/A";
+      const floorName = area.floorId ? area.floorId.name : "N/A";
+      const areaName = area.name || "N/A";
+      const dataCriacao = eq.createdAt ? new Date(eq.createdAt).toLocaleDateString("pt-BR") : "";
+
+      return [
+        eq._id.toString(),
+        escapeCsv(unitName),
+        escapeCsv(floorName),
+        escapeCsv(areaName),
+        escapeCsv(eq.tipo),
+        escapeCsv(eq.nomeMaquina),
+        escapeCsv(eq.proprietario),
+        escapeCsv(eq.usuarioLogado),
+        escapeCsv(eq.anydesk),
+        escapeCsv(eq.kaspersky),
+        escapeCsv(eq.armazenamentoLivre),
+        escapeCsv(eq.status),
+        escapeCsv(eq.observacoes),
+        escapeCsv(dataCriacao)
+      ].join(";");
+    });
+
+    // 4. Montamos o CSV em UTF-8 com BOM (\uFEFF) para forçar o Excel a reconhecer os acentos
+    const csvContent = "\uFEFF" + headers.join(";") + "\n" + rows.join("\n");
+
+    // 5. Retornamos o arquivo de download para requisição
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", "attachment; filename=inventario_equipamentos.csv");
+    res.send(csvContent);
+  } catch (error) {
+    next(error);
+  }
+});
 
 router.get("/:id", async (req, res, next) => {
   try {

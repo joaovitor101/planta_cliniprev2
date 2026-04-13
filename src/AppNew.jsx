@@ -9,6 +9,7 @@ import {
   listEquipments,
   searchEquipments,
   updateEquipment,
+  exportEquipmentsCSV,
 } from "./api/equipments";
 
 function withId(doc) {
@@ -291,6 +292,22 @@ export default function AppNew() {
       setSearchResults(list);
     } finally {
       setSearchLoading(false);
+    }
+  };
+
+  const handleExportCSV = async () => {
+    try {
+      const blob = await safeRun(() => exportEquipmentsCSV());
+      const url = window.URL.createObjectURL(new Blob([blob]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", "inventario_equipamentos.csv");
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (err) {
+      console.error(err);
+      alert("Erro ao exportar CSV");
     }
   };
 
@@ -743,6 +760,15 @@ export default function AppNew() {
               Buscar
             </button>
           </form>
+
+          <button
+            type="button"
+            onClick={handleExportCSV}
+            className="button button-primary"
+            style={{ backgroundColor: "#10b981", borderColor: "#10b981", color: "#fff", textDecoration: "none" }}
+          >
+            ⬇ Exportar CSV
+          </button>
         </div>
       </header>
 

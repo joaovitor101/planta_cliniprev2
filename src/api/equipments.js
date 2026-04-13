@@ -26,6 +26,13 @@ export async function searchEquipments({ q, by }) {
   return data;
 }
 
+export async function exportEquipmentsCSV() {
+  const { data } = await api.get("/equipments/export/csv", {
+    responseType: "blob",
+  });
+  return data;
+}
+
 export async function uploadEquipmentImage(id, file) {
   const formData = new FormData();
   formData.append("file", file);
