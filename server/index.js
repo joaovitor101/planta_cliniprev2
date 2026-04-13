@@ -12,6 +12,7 @@ const areaRoutes = require("./routes/areaRoutes");
 const textRoutes = require("./routes/textRoutes");
 const equipmentRoutes = require("./routes/equipmentRoutes");
 const authRoutes = require("./routes/authRoutes");
+const powerbiRoutes = require("./routes/powerbiRoutes");
 const { requireAuth } = require("./middlewares/requireAuth");
 
 const app = express();
@@ -25,6 +26,7 @@ app.get("/api/health", (_req, res) => {
 });
 
 app.use("/api/auth", authRoutes);
+app.use("/api/powerbi", powerbiRoutes);
 
 // Protege o restante das rotas da API.
 // Obs: como montamos as rotas públicas antes, `/api/auth` e `/api/health` ficam abertas.
