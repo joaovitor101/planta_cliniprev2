@@ -31,7 +31,6 @@ router.get("/equipamentos", async (req, res) => {
       Setor: eq.areaId ? eq.areaId.name : "Sem Setor",
       Andar: eq.areaId && eq.areaId.floorId ? eq.areaId.floorId.name : "Sem Andar",
       Unidade: eq.areaId && eq.areaId.unitId ? eq.areaId.unitId.name : "Sem Unidade",
-      
       "Data de Criacao": eq.createdAt,
       "Ultima Atualizacao": eq.updatedAt,
     }));
