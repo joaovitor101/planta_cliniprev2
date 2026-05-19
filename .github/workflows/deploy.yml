@@ -27,4 +27,4 @@ jobs:
 
             npm run build
 
-            pm2 restart planta
+            pm2 restart planta_cliniprev2
