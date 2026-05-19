@@ -56,16 +56,24 @@ function AuthApp() {
   }
 
   return (
-    <div className="app-shell" style={{ maxWidth: 560, maxHeight: "30vh", margin: "28px auto", display: "flex", justifyContent: "center", alignItems: "center" }}>
-      <header className="app-header">
-        <div className="app-title">
-          <h1>Login</h1>
-          <span>Entre para acessar as plantas</span>
-          {errorMsg ? <span style={{ color: "#b91c1c" }}>{errorMsg}</span> : null}
+    <div style={{ width: "100%", maxWidth: 320, alignSelf: "center", display: "flex", flexDirection: "column" }}>
+      <header style={{ textAlign: "center", marginBottom: 24 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 4, alignItems: "center" }}>
+          <h1 style={{ margin: 0, fontSize: 28, fontWeight: 600, color: "#111827" }}>Login</h1>
+          <span style={{ fontSize: 14, color: "#6b7280" }}>Entre para acessar as plantas</span>
+          {errorMsg ? <span style={{ color: "#b91c1c", marginTop: 8 }}>{errorMsg}</span> : null}
         </div>
       </header>
 
-      <main className="modal-body" style={{ padding: 20 }}>
+      <form 
+        style={{ width: "100%", display: "flex", flexDirection: "column", gap: 16 }}
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!busy && password) {
+            handleAuth(login);
+          }
+        }}
+      >
         <div className="field-group">
           <label className="field-label" htmlFor="auth-password">
             Senha
@@ -81,17 +89,17 @@ function AuthApp() {
           />
         </div>
 
-        <div className="field-group" style={{ marginTop: 6 }}>
+        <div className="field-group">
           <button
-            type="button"
+            type="submit"
             className="button button-primary"
-            onClick={() => handleAuth(login)}
             disabled={busy || !password}
+            style={{ width: "100%", justifyContent: "center", padding: "10px 14px" }}
           >
             {busy ? "Aguarde..." : "Entrar"}
           </button>
         </div>
-      </main>
+      </form>
     </div>
   );
 }

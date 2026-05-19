@@ -94,13 +94,11 @@ body {
 .button-primary {
   background: #111827;
   color: #f9fafb;
-  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.18);
 }
 
 .button-primary:hover {
   background: #020617;
   transform: translateY(-1px);
-  box-shadow: 0 16px 30px rgba(15, 23, 42, 0.25);
 }
 
 .button-ghost {
