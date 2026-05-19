@@ -19,7 +19,7 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
 
           script: |
-            cd /home/ec2-user/planta_cliniprev2
+            cd /home/ec2-user/planta_cliniprev
 
             git pull
 
@@ -27,4 +27,4 @@ jobs:
 
             npm run build
 
-            pm2 restart planta_cliniprev2
+            pm2 restart planta_cliniprev
