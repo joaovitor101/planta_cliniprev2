@@ -96,6 +96,7 @@ export default function AppNew() {
 
   const [equipments, setEquipments] = useState([]);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [editingEquipmentId, setEditingEquipmentId] = useState(null);
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -270,6 +271,52 @@ export default function AppNew() {
     loadTextos({ unitId: selectedUnitId, floorId: selectedFloorId });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedFloorId, selectedUnitId]);
+
+  useEffect(() => {
+    const handleKeyDown = async (e) => {
+      // Limpa seleção ao apertar Escape e fecha modais abertos
+      if (e.key === "Escape") {
+        setSelectedAreaId("");
+        setSelectedTextoId("");
+        setIsAreaModalOpen(false);
+        setEditingArea(null);
+        setIsTextoModalOpen(false);
+        setEditingTexto(null);
+        return;
+      }
+
+      // Atalhos ativos apenas no Modo de Edição e fora de inputs
+      if (isEditMode) {
+        const activeTag = document.activeElement?.tagName;
+        if (activeTag === "INPUT" || activeTag === "TEXTAREA" || activeTag === "SELECT") {
+          return;
+        }
+
+        if (e.key === "Delete" || e.key === "Backspace") {
+          if (selectedAreaId) {
+            const ok = window.confirm("Deseja excluir a área selecionada?");
+            if (!ok) return;
+            await safeRun(() => deleteArea(selectedAreaId));
+            setSelectedAreaId("");
+            setIsAreaModalOpen(false);
+            setEditingArea(null);
+            await loadAreas({ unitId: selectedUnitId, floorId: selectedFloorId });
+          } else if (selectedTextoId) {
+            const ok = window.confirm("Deseja excluir o texto selecionado?");
+            if (!ok) return;
+            await safeRun(() => deleteText(selectedTextoId));
+            setSelectedTextoId("");
+            setIsTextoModalOpen(false);
+            setEditingTexto(null);
+            await loadTextos({ unitId: selectedUnitId, floorId: selectedFloorId });
+          }
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selectedAreaId, selectedTextoId, isEditMode, selectedUnitId, selectedFloorId]);
 
   const currentUnit = useMemo(
     () => units.find((u) => u.id === selectedUnitId) ?? null,
@@ -627,14 +674,18 @@ export default function AppNew() {
         prev.map((a) => {
           if (a.id !== d.itemId) return a;
           if (d.mode === "resize") {
-            const nextWidth = Math.max(120, d.originWidth + dx);
-            const nextHeight = Math.max(80, d.originHeight + dy);
+            const snappedWidth = Math.round((d.originWidth + dx) / 20) * 20;
+            const snappedHeight = Math.round((d.originHeight + dy) / 20) * 20;
+            const nextWidth = Math.max(120, snappedWidth);
+            const nextHeight = Math.max(80, snappedHeight);
             return { ...a, width: nextWidth, height: nextHeight };
           }
+          const snappedX = Math.round((d.originX + dx) / 20) * 20;
+          const snappedY = Math.round((d.originY + dy) / 20) * 20;
           return {
             ...a,
-            x: Math.max(0, d.originX + dx),
-            y: Math.max(0, d.originY + dy),
+            x: Math.max(0, snappedX),
+            y: Math.max(0, snappedY),
           };
         }),
       );
@@ -646,14 +697,18 @@ export default function AppNew() {
       prev.map((t) => {
         if (t.id !== d.itemId) return t;
         if (d.mode === "resize") {
-          const nextWidth = Math.max(80, d.originWidth + dx);
-          const nextHeight = Math.max(24, d.originHeight + dy);
+          const snappedWidth = Math.round((d.originWidth + dx) / 20) * 20;
+          const snappedHeight = Math.round((d.originHeight + dy) / 20) * 20;
+          const nextWidth = Math.max(80, snappedWidth);
+          const nextHeight = Math.max(24, snappedHeight);
           return { ...t, width: nextWidth, height: nextHeight };
         }
+        const snappedX = Math.round((d.originX + dx) / 20) * 20;
+        const snappedY = Math.round((d.originY + dy) / 20) * 20;
         return {
           ...t,
-          x: Math.max(0, d.originX + dx),
-          y: Math.max(0, d.originY + dy),
+          x: Math.max(0, snappedX),
+          y: Math.max(0, snappedY),
         };
       }),
     );
@@ -693,7 +748,7 @@ export default function AppNew() {
   };
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell${isFullscreen ? " fullscreen" : ""}`}>
       <header className="app-header">
         <div className="app-title">
           <h1>Planta das Unidades Angelus</h1>
@@ -811,7 +866,11 @@ export default function AppNew() {
       )}
 
       <main className="canvas-container">
-        <div className="canvas" onPointerMove={onDragMove} onPointerUp={endDrag}>
+        <div
+          className={`canvas${isEditMode ? " edit-mode" : ""}`}
+          onPointerMove={onDragMove}
+          onPointerUp={endDrag}
+        >
           {!selectedUnitId ? (
             <div className="empty-state">Crie ou selecione uma unidade.</div>
           ) : !selectedFloorId ? (
@@ -909,6 +968,15 @@ export default function AppNew() {
             disabled={!selectedFloorId}
           >
             {isEditMode ? "Modo editar: ON" : "Modo editar: OFF"}
+          </button>
+
+          <button
+            type="button"
+            className="button button-ghost"
+            onClick={() => setIsFullscreen((v) => !v)}
+            disabled={!selectedFloorId}
+          >
+            {isFullscreen ? "🗗 Sair da Tela Cheia" : "🗖 Tela Cheia"}
           </button>
 
           <button type="button" className="button button-ghost" onClick={handleAddUnit}>

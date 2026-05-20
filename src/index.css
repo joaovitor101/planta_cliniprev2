@@ -629,3 +629,47 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
+/* Fullscreen mode for the shell */
+.app-shell.fullscreen {
+  position: fixed;
+  inset: 0;
+  max-width: 100vw;
+  width: 100vw;
+  height: 100vh;
+  min-height: 100vh;
+  margin: 0;
+  border-radius: 0;
+  z-index: 999;
+}
+
+/* Edit mode canvas and animations */
+.canvas.edit-mode {
+  border-color: var(--focus-border);
+  box-shadow: 0 0 0 3px var(--focus-ring), inset 0 0 0 1px rgba(15, 23, 42, 0.02);
+  animation: canvas-pulse 2.2s infinite ease-in-out;
+}
+
+@keyframes canvas-pulse {
+  0% {
+    box-shadow: 0 0 0 2px var(--focus-ring);
+  }
+  50% {
+    box-shadow: 0 0 0 5px var(--focus-ring);
+  }
+  100% {
+    box-shadow: 0 0 0 2px var(--focus-ring);
+  }
+}
+
+/* Cursors during layout editing */
+.canvas.edit-mode .area-card,
+.canvas.edit-mode .texto-card {
+  cursor: grab;
+}
+
+.canvas.edit-mode .area-card:active,
+.canvas.edit-mode .texto-card:active {
+  cursor: grabbing;
+}
+
