@@ -11,6 +11,9 @@ function AuthApp() {
   useEffect(() => {
     const token = localStorage.getItem("authToken") || "";
     setAuthToken(token);
+
+    const theme = localStorage.getItem("theme") || "light";
+    document.documentElement.setAttribute("data-theme", theme);
   }, []);
 
   const handleAuth = async (fn) => {
@@ -45,7 +48,7 @@ function AuthApp() {
             type="button"
             className="button button-ghost"
             onClick={handleLogout}
-            style={{ background: "#fff" }}
+            style={{ background: "var(--bg-shell)", border: "1px solid var(--border-color)", color: "var(--text-main)" }}
           >
             Sair
           </button>
@@ -59,9 +62,9 @@ function AuthApp() {
     <div style={{ width: "100%", maxWidth: 320, alignSelf: "center", display: "flex", flexDirection: "column" }}>
       <header style={{ textAlign: "center", marginBottom: 24 }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 4, alignItems: "center" }}>
-          <h1 style={{ margin: 0, fontSize: 28, fontWeight: 600, color: "#111827" }}>Login</h1>
-          <span style={{ fontSize: 14, color: "#6b7280" }}>Entre para acessar as plantas</span>
-          {errorMsg ? <span style={{ color: "#b91c1c", marginTop: 8 }}>{errorMsg}</span> : null}
+          <h1 style={{ margin: 0, fontSize: 28, fontWeight: 600, color: "var(--text-main)" }}>Login</h1>
+          <span style={{ fontSize: 14, color: "var(--text-muted)" }}>Entre para acessar as plantas</span>
+          {errorMsg ? <span style={{ color: "var(--badge-danger-text)", marginTop: 8 }}>{errorMsg}</span> : null}
         </div>
       </header>
 

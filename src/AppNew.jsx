@@ -69,6 +69,15 @@ function hexToRgba(hex, alpha = 1) {
 }
 
 export default function AppNew() {
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem("theme") || "light";
+  });
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem("theme", theme);
+  }, [theme]);
+
   const [units, setUnits] = useState([]);
   const [floors, setFloors] = useState([]);
   const [areas, setAreas] = useState([]);
@@ -689,7 +698,7 @@ export default function AppNew() {
         <div className="app-title">
           <h1>Planta das Unidades Angelus</h1>
           <span>Unidades · Andares · Áreas · Equipamentos</span>
-          {errorMsg ? <span style={{ color: "#b91c1c" }}>{errorMsg}</span> : null}
+          {errorMsg ? <span style={{ color: "var(--badge-danger-text)" }}>{errorMsg}</span> : null}
         </div>
 
         <div className="toolbar">
@@ -768,6 +777,15 @@ export default function AppNew() {
             style={{ backgroundColor: "#10b981", borderColor: "#10b981", color: "#fff", textDecoration: "none" }}
           >
             ⬇ Exportar CSV
+          </button>
+
+          <button
+            type="button"
+            className="theme-toggle"
+            onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+            title="Alternar tema"
+          >
+            {theme === "light" ? "🌙" : "☀️"}
           </button>
         </div>
       </header>
