@@ -65,7 +65,14 @@ router.get("/search", async (req, res, next) => {
       query = { nomeMaquina: regex };
     } else {
       query = {
-        $or: [{ usuarioLogado: regex }, { nomeMaquina: regex }, { proprietario: regex }],
+        $or: [
+          { usuarioLogado: regex },
+          { nomeMaquina: regex },
+          { proprietario: regex },
+          { modeloTv: regex },
+          { serialTv: regex },
+          { serialGautek: regex }
+        ],
       };
     }
 
@@ -104,6 +111,12 @@ router.get("/export/csv", async (req, res, next) => {
       "Armazenamento Livre",
       "Status",
       "Observações",
+      "Modelo TV",
+      "Série TV",
+      "Conexão TV",
+      "Possui Gautek",
+      "Série Gautek",
+      "Conexão Gautek",
       "Data de Cadastro"
     ];
 
@@ -136,6 +149,12 @@ router.get("/export/csv", async (req, res, next) => {
         escapeCsv(eq.armazenamentoLivre),
         escapeCsv(eq.status),
         escapeCsv(eq.observacoes),
+        escapeCsv(eq.modeloTv || ""),
+        escapeCsv(eq.serialTv || ""),
+        escapeCsv(eq.conexaoTv || ""),
+        escapeCsv(eq.hasGautek ? "Sim" : "Não"),
+        escapeCsv(eq.serialGautek || ""),
+        escapeCsv(eq.conexaoGautek || ""),
         escapeCsv(dataCriacao)
       ].join(";");
     });

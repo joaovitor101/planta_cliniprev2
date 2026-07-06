@@ -68,6 +68,14 @@ function hexToRgba(hex, alpha = 1) {
   return `rgba(0,0,0,${alpha})`;
 }
 
+function getTipoLabel(tipo) {
+  if (tipo === "televisao") return "Televisão";
+  if (tipo === "notebook") return "Notebook";
+  if (tipo === "desktop") return "Desktop";
+  if (tipo === "impressora") return "Impressora";
+  return "Outro";
+}
+
 export default function AppNew() {
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem("theme") || "light";
@@ -123,6 +131,12 @@ export default function AppNew() {
     status: "ativo",
     armazenamentoLivre: "",
     observacoes: "",
+    modeloTv: "",
+    serialTv: "",
+    conexaoTv: "wifi",
+    hasGautek: false,
+    serialGautek: "",
+    conexaoGautek: "wifi",
   });
 
   const dragRef = useRef({
@@ -387,6 +401,12 @@ export default function AppNew() {
       status: "ativo",
       armazenamentoLivre: "",
       observacoes: "",
+      modeloTv: "",
+      serialTv: "",
+      conexaoTv: "wifi",
+      hasGautek: false,
+      serialGautek: "",
+      conexaoGautek: "wifi",
     });
     await loadEquipments({ areaId: a.id });
   };
@@ -571,8 +591,15 @@ export default function AppNew() {
       nomeMaquina: "",
       usuarioLogado: "",
       anydesk: "",
+      kaspersky: "",
       armazenamentoLivre: "",
       observacoes: "",
+      modeloTv: "",
+      serialTv: "",
+      conexaoTv: "wifi",
+      hasGautek: false,
+      serialGautek: "",
+      conexaoGautek: "wifi",
     }));
     setEditingEquipmentId(null);
     await loadEquipments({ areaId: selectedAreaId });
@@ -604,6 +631,12 @@ export default function AppNew() {
       status: e.status || "ativo",
       armazenamentoLivre: e.armazenamentoLivre || "",
       observacoes: e.observacoes || "",
+      modeloTv: e.modeloTv || "",
+      serialTv: e.serialTv || "",
+      conexaoTv: e.conexaoTv || "wifi",
+      hasGautek: e.hasGautek || false,
+      serialGautek: e.serialGautek || "",
+      conexaoGautek: e.conexaoGautek || "wifi",
     });
   };
 
@@ -618,6 +651,12 @@ export default function AppNew() {
       kaspersky: "",
       armazenamentoLivre: "",
       observacoes: "",
+      modeloTv: "",
+      serialTv: "",
+      conexaoTv: "wifi",
+      hasGautek: false,
+      serialGautek: "",
+      conexaoGautek: "wifi",
     }));
   };
 
@@ -855,9 +894,20 @@ export default function AppNew() {
             <ul>
               {searchResults.map((equipment) => (
                 <li key={equipment.id} className="equipment-meta">
-                  <strong>{equipment.usuarioLogado || "-"}</strong> ·{" "}
-                  <span>{equipment.nomeMaquina}</span>{" "}
-                  {equipment.proprietario ? `· Proprietário: ${equipment.proprietario}` : ""}
+                  {equipment.tipo === "televisao" ? (
+                    <>
+                      <strong>Televisão</strong> · <span>{equipment.nomeMaquina}</span>
+                      {equipment.modeloTv ? ` · Modelo: ${equipment.modeloTv}` : ""}
+                      {equipment.serialTv ? ` · Série TV: ${equipment.serialTv}` : ""}
+                      {equipment.hasGautek ? ` · Com Gautek (Série: ${equipment.serialGautek || "-"})` : ""}
+                    </>
+                  ) : (
+                    <>
+                      <strong>{equipment.usuarioLogado || "-"}</strong> ·{" "}
+                      <span>{equipment.nomeMaquina}</span>{" "}
+                      {equipment.proprietario ? `· Proprietário: ${equipment.proprietario}` : ""}
+                    </>
+                  )}
                 </li>
               ))}
             </ul>
@@ -1177,37 +1227,90 @@ function AreaModal({
                 equipments.map((equipment) => (
                   <div key={equipment.id} className="equipment-card">
                     <div className="equipment-meta">
-                      Tipo: <strong>{equipment.tipo}</strong>
+                      Tipo: <strong>{getTipoLabel(equipment.tipo)}</strong>
                     </div>
-                    <div className="equipment-meta">
-                      Proprietário: <strong>{equipment.proprietario || "-"}</strong>
-                    </div>
-                    <div className="equipment-meta">
-                      Máquina: <strong>{equipment.nomeMaquina}</strong>
-                    </div>
-                    <div className="equipment-meta">
-                      Usuário: <strong>{equipment.usuarioLogado || "-"}</strong>
-                    </div>
-                    <div className="equipment-meta">
-                      AnyDesk: <strong>{equipment.anydesk || "-"}</strong>
-                    </div>
-                    <div className="equipment-meta">
-                      Kaspersky: <strong>{equipment.kaspersky || "-"}</strong>
-                    </div>
-                    <div className="equipment-meta">
-                      Status:{" "}
-                      <span
-                        className={
-                          "badge " +
-                          (equipment.status === "ativo" ? "badge-success" : "badge-danger")
-                        }
-                      >
-                        {equipment.status === "ativo" ? "Ativo" : "Inativo"}
-                      </span>
-                    </div>
-                    <div className="equipment-meta">
-                      Armazenamento livre: <strong>{equipment.armazenamentoLivre || "-"}</strong>
-                    </div>
+                    {equipment.tipo === "televisao" ? (
+                      <>
+                        <div className="equipment-meta">
+                          Identificação: <strong>{equipment.nomeMaquina}</strong>
+                        </div>
+                        <div className="equipment-meta">
+                          Modelo TV: <strong>{equipment.modeloTv || "-"}</strong>
+                        </div>
+                        <div className="equipment-meta">
+                          Série TV: <strong>{equipment.serialTv || "-"}</strong>
+                        </div>
+                        <div className="equipment-meta">
+                          Conexão TV: <strong>{equipment.conexaoTv === "wifi" ? "Wi-Fi" : equipment.conexaoTv === "cabo" ? "Cabo" : "-"}</strong>
+                        </div>
+                        <div className="equipment-meta">
+                          Possui Gautek: <strong>{equipment.hasGautek ? "Sim" : "Não"}</strong>
+                        </div>
+                        {equipment.hasGautek && (
+                          <>
+                            <div className="equipment-meta">
+                              Série Gautek: <strong>{equipment.serialGautek || "-"}</strong>
+                            </div>
+                            <div className="equipment-meta">
+                              Conexão Gautek: <strong>{equipment.conexaoGautek === "wifi" ? "Wi-Fi" : equipment.conexaoGautek === "cabo" ? "Cabo" : "-"}</strong>
+                            </div>
+                          </>
+                        )}
+                        <div className="equipment-meta">
+                          Status:{" "}
+                          <span
+                            className={
+                              "badge " +
+                              (equipment.status === "ativo" ? "badge-success" : "badge-danger")
+                            }
+                          >
+                            {equipment.status === "ativo" ? "Ativo" : "Inativo"}
+                          </span>
+                        </div>
+                        {equipment.observacoes && (
+                          <div className="equipment-meta" style={{ gridColumn: "1 / -1" }}>
+                            Observações: <strong>{equipment.observacoes}</strong>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <div className="equipment-meta">
+                          Proprietário: <strong>{equipment.proprietario || "-"}</strong>
+                        </div>
+                        <div className="equipment-meta">
+                          Máquina: <strong>{equipment.nomeMaquina}</strong>
+                        </div>
+                        <div className="equipment-meta">
+                          Usuário: <strong>{equipment.usuarioLogado || "-"}</strong>
+                        </div>
+                        <div className="equipment-meta">
+                          AnyDesk: <strong>{equipment.anydesk || "-"}</strong>
+                        </div>
+                        <div className="equipment-meta">
+                          Kaspersky: <strong>{equipment.kaspersky || "-"}</strong>
+                        </div>
+                        <div className="equipment-meta">
+                          Status:{" "}
+                          <span
+                            className={
+                              "badge " +
+                              (equipment.status === "ativo" ? "badge-success" : "badge-danger")
+                            }
+                          >
+                            {equipment.status === "ativo" ? "Ativo" : "Inativo"}
+                          </span>
+                        </div>
+                        <div className="equipment-meta">
+                          Armazenamento livre: <strong>{equipment.armazenamentoLivre || "-"}</strong>
+                        </div>
+                        {equipment.observacoes && (
+                          <div className="equipment-meta" style={{ gridColumn: "1 / -1" }}>
+                            Observações: <strong>{equipment.observacoes}</strong>
+                          </div>
+                        )}
+                      </>
+                    )}
                     <div className="equipment-actions">
                       <button
                         type="button"
@@ -1272,107 +1375,238 @@ function AreaModal({
                   <option value="notebook">Notebook</option>
                   <option value="desktop">Desktop</option>
                   <option value="impressora">Impressora</option>
+                  <option value="televisao">Televisão</option>
                   <option value="outro">Outro</option>
                 </select>
               </div>
-              <div className="field-group">
-                <label className="field-label" htmlFor="proprietario">
-                  Proprietário
-                </label>
-                <input
-                  id="proprietario"
-                  className="field-input"
-                  value={equipmentDraft.proprietario}
-                  onChange={(event) =>
-                    setEquipmentDraft((prev) => ({ ...prev, proprietario: event.target.value }))
-                  }
-                />
-              </div>
-              <div className="field-group">
-                <label className="field-label" htmlFor="nomeMaquina">
-                  Nome da máquina *
-                </label>
-                <input
-                  id="nomeMaquina"
-                  className="field-input"
-                  value={equipmentDraft.nomeMaquina}
-                  onChange={(event) =>
-                    setEquipmentDraft((prev) => ({ ...prev, nomeMaquina: event.target.value }))
-                  }
-                />
-              </div>
-              <div className="field-group">
-                <label className="field-label" htmlFor="usuarioLogado">
-                  Usuário logado
-                </label>
-                <input
-                  id="usuarioLogado"
-                  className="field-input"
-                  value={equipmentDraft.usuarioLogado}
-                  onChange={(event) =>
-                    setEquipmentDraft((prev) => ({ ...prev, usuarioLogado: event.target.value }))
-                  }
-                />
-              </div>
-              <div className="field-group">
-                <label className="field-label" htmlFor="anydesk">
-                  AnyDesk
-                </label>
-                <input
-                  id="anydesk"
-                  className="field-input"
-                  value={equipmentDraft.anydesk}
-                  onChange={(event) =>
-                    setEquipmentDraft((prev) => ({ ...prev, anydesk: event.target.value }))
-                  }
-                />
-              </div>
-              <div className="field-group">
-                <label className="field-label" htmlFor="kaspersky">
-                  Kaspersky
-                </label>
-                <input
-                  id="kaspersky"
-                  className="field-input"
-                  value={equipmentDraft.kaspersky}
-                  onChange={(event) =>
-                    setEquipmentDraft((prev) => ({ ...prev, kaspersky: event.target.value }))
-                  }
-                />
-              </div>
-              <div className="field-group">
-                <label className="field-label" htmlFor="status">
-                  Status
-                </label>
-                <select
-                  id="status"
-                  className="field-select"
-                  value={equipmentDraft.status}
-                  onChange={(event) =>
-                    setEquipmentDraft((prev) => ({ ...prev, status: event.target.value }))
-                  }
-                >
-                  <option value="ativo">Ativo</option>
-                  <option value="inativo">Inativo</option>
-                </select>
-              </div>
-              <div className="field-group">
-                <label className="field-label" htmlFor="armazenamentoLivre">
-                  Armazenamento livre
-                </label>
-                <input
-                  id="armazenamentoLivre"
-                  className="field-input"
-                  value={equipmentDraft.armazenamentoLivre}
-                  onChange={(event) =>
-                    setEquipmentDraft((prev) => ({
-                      ...prev,
-                      armazenamentoLivre: event.target.value,
-                    }))
-                  }
-                  placeholder="Ex: 20/100 GB"
-                />
-              </div>
+
+              {equipmentDraft.tipo === "televisao" ? (
+                <>
+                  <div className="field-group">
+                    <label className="field-label" htmlFor="nomeMaquina">
+                      Identificação da TV *
+                    </label>
+                    <input
+                      id="nomeMaquina"
+                      className="field-input"
+                      value={equipmentDraft.nomeMaquina}
+                      onChange={(event) =>
+                        setEquipmentDraft((prev) => ({ ...prev, nomeMaquina: event.target.value }))
+                      }
+                      placeholder="Ex: TV Recepção"
+                    />
+                  </div>
+                  <div className="field-group">
+                    <label className="field-label" htmlFor="modeloTv">
+                      Modelo da TV
+                    </label>
+                    <input
+                      id="modeloTv"
+                      className="field-input"
+                      value={equipmentDraft.modeloTv}
+                      onChange={(event) =>
+                        setEquipmentDraft((prev) => ({ ...prev, modeloTv: event.target.value }))
+                      }
+                      placeholder="Ex: LG ThinQ 55"
+                    />
+                  </div>
+                  <div className="field-group">
+                    <label className="field-label" htmlFor="serialTv">
+                      Número de Série da TV
+                    </label>
+                    <input
+                      id="serialTv"
+                      className="field-input"
+                      value={equipmentDraft.serialTv}
+                      onChange={(event) =>
+                        setEquipmentDraft((prev) => ({ ...prev, serialTv: event.target.value }))
+                      }
+                    />
+                  </div>
+                  <div className="field-group">
+                    <label className="field-label" htmlFor="conexaoTv">
+                      Conexão da TV
+                    </label>
+                    <select
+                      id="conexaoTv"
+                      className="field-select"
+                      value={equipmentDraft.conexaoTv}
+                      onChange={(event) =>
+                        setEquipmentDraft((prev) => ({ ...prev, conexaoTv: event.target.value }))
+                      }
+                    >
+                      <option value="wifi">Wi-Fi</option>
+                      <option value="cabo">Cabo</option>
+                    </select>
+                  </div>
+                  <div className="field-group">
+                    <label className="field-label" htmlFor="status">
+                      Status
+                    </label>
+                    <select
+                      id="status"
+                      className="field-select"
+                      value={equipmentDraft.status}
+                      onChange={(event) =>
+                        setEquipmentDraft((prev) => ({ ...prev, status: event.target.value }))
+                      }
+                    >
+                      <option value="ativo">Ativo</option>
+                      <option value="inativo">Inativo</option>
+                    </select>
+                  </div>
+                  <div className="field-group">
+                    <label className="field-label" htmlFor="hasGautek">
+                      Possui Gautek TV Box?
+                    </label>
+                    <select
+                      id="hasGautek"
+                      className="field-select"
+                      value={equipmentDraft.hasGautek ? "true" : "false"}
+                      onChange={(event) =>
+                        setEquipmentDraft((prev) => ({ ...prev, hasGautek: event.target.value === "true" }))
+                      }
+                    >
+                      <option value="false">Não</option>
+                      <option value="true">Sim</option>
+                    </select>
+                  </div>
+                  {equipmentDraft.hasGautek && (
+                    <>
+                      <div className="field-group">
+                        <label className="field-label" htmlFor="serialGautek">
+                          Número de Série do Gautek
+                        </label>
+                        <input
+                          id="serialGautek"
+                          className="field-input"
+                          value={equipmentDraft.serialGautek}
+                          onChange={(event) =>
+                            setEquipmentDraft((prev) => ({ ...prev, serialGautek: event.target.value }))
+                          }
+                        />
+                      </div>
+                      <div className="field-group">
+                        <label className="field-label" htmlFor="conexaoGautek">
+                          Conexão do Gautek
+                        </label>
+                        <select
+                          id="conexaoGautek"
+                          className="field-select"
+                          value={equipmentDraft.conexaoGautek}
+                          onChange={(event) =>
+                            setEquipmentDraft((prev) => ({ ...prev, conexaoGautek: event.target.value }))
+                          }
+                        >
+                          <option value="wifi">Wi-Fi</option>
+                          <option value="cabo">Cabo</option>
+                        </select>
+                      </div>
+                    </>
+                  )}
+                </>
+              ) : (
+                <>
+                  <div className="field-group">
+                    <label className="field-label" htmlFor="proprietario">
+                      Proprietário
+                    </label>
+                    <input
+                      id="proprietario"
+                      className="field-input"
+                      value={equipmentDraft.proprietario}
+                      onChange={(event) =>
+                        setEquipmentDraft((prev) => ({ ...prev, proprietario: event.target.value }))
+                      }
+                    />
+                  </div>
+                  <div className="field-group">
+                    <label className="field-label" htmlFor="nomeMaquina">
+                      Nome da máquina *
+                    </label>
+                    <input
+                      id="nomeMaquina"
+                      className="field-input"
+                      value={equipmentDraft.nomeMaquina}
+                      onChange={(event) =>
+                        setEquipmentDraft((prev) => ({ ...prev, nomeMaquina: event.target.value }))
+                      }
+                    />
+                  </div>
+                  <div className="field-group">
+                    <label className="field-label" htmlFor="usuarioLogado">
+                      Usuário logado
+                    </label>
+                    <input
+                      id="usuarioLogado"
+                      className="field-input"
+                      value={equipmentDraft.usuarioLogado}
+                      onChange={(event) =>
+                        setEquipmentDraft((prev) => ({ ...prev, usuarioLogado: event.target.value }))
+                      }
+                    />
+                  </div>
+                  <div className="field-group">
+                    <label className="field-label" htmlFor="anydesk">
+                      AnyDesk
+                    </label>
+                    <input
+                      id="anydesk"
+                      className="field-input"
+                      value={equipmentDraft.anydesk}
+                      onChange={(event) =>
+                        setEquipmentDraft((prev) => ({ ...prev, anydesk: event.target.value }))
+                      }
+                    />
+                  </div>
+                  <div className="field-group">
+                    <label className="field-label" htmlFor="kaspersky">
+                      Kaspersky
+                    </label>
+                    <input
+                      id="kaspersky"
+                      className="field-input"
+                      value={equipmentDraft.kaspersky}
+                      onChange={(event) =>
+                        setEquipmentDraft((prev) => ({ ...prev, kaspersky: event.target.value }))
+                      }
+                    />
+                  </div>
+                  <div className="field-group">
+                    <label className="field-label" htmlFor="status">
+                      Status
+                    </label>
+                    <select
+                      id="status"
+                      className="field-select"
+                      value={equipmentDraft.status}
+                      onChange={(event) =>
+                        setEquipmentDraft((prev) => ({ ...prev, status: event.target.value }))
+                      }
+                    >
+                      <option value="ativo">Ativo</option>
+                      <option value="inativo">Inativo</option>
+                    </select>
+                  </div>
+                  <div className="field-group">
+                    <label className="field-label" htmlFor="armazenamentoLivre">
+                      Armazenamento livre
+                    </label>
+                    <input
+                      id="armazenamentoLivre"
+                      className="field-input"
+                      value={equipmentDraft.armazenamentoLivre}
+                      onChange={(event) =>
+                        setEquipmentDraft((prev) => ({
+                          ...prev,
+                          armazenamentoLivre: event.target.value,
+                        }))
+                      }
+                      placeholder="Ex: 20/100 GB"
+                    />
+                  </div>
+                </>
+              )}
             </div>
             <div className="field-group">
               <label className="field-label" htmlFor="observacoes">

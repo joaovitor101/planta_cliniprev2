@@ -9,7 +9,7 @@ const equipmentSchema = new mongoose.Schema(
     },
     tipo: {
       type: String,
-      enum: ["notebook", "desktop", "impressora", "outro"],
+      enum: ["notebook", "desktop", "impressora", "outro", "televisao"],
       default: "notebook",
     },
     proprietario: {
@@ -45,6 +45,32 @@ const equipmentSchema = new mongoose.Schema(
     observacoes: {
       type: String,
       trim: true,
+    },
+    modeloTv: {
+      type: String,
+      trim: true,
+    },
+    serialTv: {
+      type: String,
+      trim: true,
+    },
+    conexaoTv: {
+      type: String,
+      enum: ["wifi", "cabo", ""],
+      default: "",
+    },
+    hasGautek: {
+      type: Boolean,
+      default: false,
+    },
+    serialGautek: {
+      type: String,
+      trim: true,
+    },
+    conexaoGautek: {
+      type: String,
+      enum: ["wifi", "cabo", ""],
+      default: "",
     },
     imagemUrl: {
       type: String,
