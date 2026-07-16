@@ -62,6 +62,15 @@ app.get("*", (req, res) => {
   res.sendFile(path.join(distPath, "index.html"));
 });
 
+// Middleware de Tratamento de Erros
+app.use((err, req, res, next) => {
+  console.error("Erro interno do servidor:", err);
+  res.status(500).json({
+    message: err.message,
+    stack: err.stack,
+  });
+});
+
 const PORT = process.env.PORT || 4000;
 
 async function start() {
