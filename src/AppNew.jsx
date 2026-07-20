@@ -392,9 +392,9 @@ export default function AppNew() {
     setIsAreaModalOpen(true);
     setEditingEquipmentId(null);
     setEquipmentDraft({
-      tipo: "notebook",
+      tipo: a.tipo === "tv" ? "televisao" : "notebook",
       proprietario: "",
-      nomeMaquina: "",
+      nomeMaquina: a.tipo === "tv" ? (a.name || "") : "",
       usuarioLogado: "",
       anydesk: "",
       kaspersky: "",
@@ -408,7 +408,30 @@ export default function AppNew() {
       serialGautek: "",
       conexaoGautek: "wifi",
     });
-    await loadEquipments({ areaId: a.id });
+    const equipmentsList = await loadEquipments({ areaId: a.id });
+    if (a.tipo === "tv") {
+      const tvEq = equipmentsList.find((e) => e.tipo === "televisao");
+      if (tvEq) {
+        setEditingEquipmentId(tvEq.id);
+        setEquipmentDraft({
+          tipo: "televisao",
+          proprietario: tvEq.proprietario || "",
+          nomeMaquina: tvEq.nomeMaquina || "",
+          usuarioLogado: tvEq.usuarioLogado || "",
+          anydesk: tvEq.anydesk || "",
+          kaspersky: tvEq.kaspersky || "",
+          status: tvEq.status || "ativo",
+          armazenamentoLivre: tvEq.armazenamentoLivre || "",
+          observacoes: tvEq.observacoes || "",
+          modeloTv: tvEq.modeloTv || "",
+          serialTv: tvEq.serialTv || "",
+          conexaoTv: tvEq.conexaoTv || "wifi",
+          hasGautek: tvEq.hasGautek || false,
+          serialGautek: tvEq.serialGautek || "",
+          conexaoGautek: tvEq.conexaoGautek || "wifi",
+        });
+      }
+    }
   };
 
   const handleAddUnit = async () => {
@@ -441,6 +464,27 @@ export default function AppNew() {
         width: 220,
         height: 120,
         color: "#dbeafe",
+        tipo: "area",
+      }),
+    );
+    const a = withId(created);
+    await loadAreas({ unitId: selectedUnitId, floorId: selectedFloorId });
+    await handleOpenAreaModal(a);
+  };
+
+  const handleAddTv = async () => {
+    if (!selectedUnitId || !selectedFloorId) return;
+    const created = await safeRun(() =>
+      createArea({
+        unitId: selectedUnitId,
+        floorId: selectedFloorId,
+        name: "Nova TV",
+        x: 380,
+        y: 220,
+        width: 100,
+        height: 75,
+        color: "#475569",
+        tipo: "tv",
       }),
     );
     const a = withId(created);
@@ -454,11 +498,39 @@ export default function AppNew() {
       name: editingArea.name,
       printers: editingArea.printers || [],
       color: editingArea.color || "#dbeafe",
+      tipo: editingArea.tipo || "area",
     };
     const updated = await safeRun(() => patchArea(editingArea.id, payload));
     const a = { ...withId(updated), printers: payload.printers };
     setEditingArea(a);
     setAreas((prev) => prev.map((x) => (x.id === a.id ? a : x)));
+
+    if (a.tipo === "tv") {
+      const trimmedName = editingArea.name.trim() || "TV";
+      if (editingEquipmentId) {
+        await safeRun(() =>
+          updateEquipment(editingEquipmentId, {
+            ...equipmentDraft,
+            tipo: "televisao",
+            nomeMaquina: trimmedName,
+            areaId: a.id,
+          }),
+        );
+      } else {
+        const createdEq = await safeRun(() =>
+          createEquipment({
+            ...equipmentDraft,
+            tipo: "televisao",
+            nomeMaquina: trimmedName,
+            areaId: a.id,
+          }),
+        );
+        if (createdEq) {
+          setEditingEquipmentId(withId(createdEq).id);
+        }
+      }
+      await loadEquipments({ areaId: a.id });
+    }
   };
 
   const handleUpdateAreaColorLocal = (value) => {
@@ -468,12 +540,16 @@ export default function AppNew() {
   };
 
   const handleResetAreaColorLocal = () => {
-    handleUpdateAreaColorLocal("#dbeafe");
+    if (editingArea?.tipo === "tv") {
+      handleUpdateAreaColorLocal("#475569");
+    } else {
+      handleUpdateAreaColorLocal("#dbeafe");
+    }
   };
 
   const handleDeleteArea = async () => {
     if (!editingArea?.id) return;
-    const ok = window.confirm("Deseja excluir esta área?");
+    const ok = window.confirm(editingArea.tipo === "tv" ? "Deseja excluir esta TV?" : "Deseja excluir esta área?");
     if (!ok) return;
     await safeRun(() => deleteArea(editingArea.id));
     setIsAreaModalOpen(false);
@@ -840,6 +916,17 @@ export default function AppNew() {
             <span>Adicionar área</span>
           </button>
 
+          <button
+            type="button"
+            className="button button-primary"
+            onClick={handleAddTv}
+            disabled={!selectedUnitId || !selectedFloorId}
+            style={{ backgroundColor: "#475569", borderColor: "#475569", marginLeft: "8px" }}
+          >
+            <span>📺</span>
+            <span>Adicionar TV</span>
+          </button>
+
           <form className="search-bar" onSubmit={handleSearchEquipments}>
             <select
               className="select"
@@ -933,39 +1020,49 @@ export default function AppNew() {
             </div>
           ) : (
             <>
-              {areas.map((area) => (
-                <button
-                  key={area.id}
-                  type="button"
-                  className={"area-card" + (area.id === selectedAreaId ? " selected" : "")}
-                  style={{
-                    left: `${area.x || 0}px`,
-                    top: `${area.y || 0}px`,
-                    width: `${area.width || 220}px`,
-                    height: `${area.height || 120}px`,
-                    backgroundColor: area.color || undefined,
-                    outlineColor: area.color || undefined,
-                  }}
-                  onClick={() => {
-                    if (isEditMode) return;
-                    handleOpenAreaModal(area);
-                  }}
-                  onPointerDown={(e) => beginDragArea(e, area, "move")}
-                >
-                  <span className="area-name">{area.name}</span>
-                  {isEditMode ? (
-                    <span
-                      className="area-resize-handle"
-                      onPointerDown={(event) => {
-                        event.stopPropagation();
-                        beginDragArea(event, area, "resize");
-                      }}
-                    >
-                      ⤢
-                    </span>
-                  ) : null}
-                </button>
-              ))}
+              {areas.map((area) => {
+                const isTv = area.tipo === "tv";
+                return (
+                  <button
+                    key={area.id}
+                    type="button"
+                    className={`area-card${isTv ? " tv-card" : ""}` + (area.id === selectedAreaId ? " selected" : "")}
+                    style={{
+                      left: `${area.x || 0}px`,
+                      top: `${area.y || 0}px`,
+                      width: `${area.width || (isTv ? 100 : 220)}px`,
+                      height: `${area.height || (isTv ? 75 : 120)}px`,
+                      backgroundColor: area.color || (isTv ? "#475569" : undefined),
+                      outlineColor: area.color || undefined,
+                    }}
+                    onClick={() => {
+                      if (isEditMode) return;
+                      handleOpenAreaModal(area);
+                    }}
+                    onPointerDown={(e) => beginDragArea(e, area, "move")}
+                  >
+                    {isTv ? (
+                      <div className="tv-card-content">
+                        <span className="tv-card-icon">📺</span>
+                        <span className="tv-card-name">{area.name}</span>
+                      </div>
+                    ) : (
+                      <span className="area-name">{area.name}</span>
+                    )}
+                    {isEditMode ? (
+                      <span
+                        className="area-resize-handle"
+                        onPointerDown={(event) => {
+                          event.stopPropagation();
+                          beginDragArea(event, area, "resize");
+                        }}
+                      >
+                        ⤢
+                      </span>
+                    ) : null}
+                  </button>
+                );
+              })}
 
               {textos.map((texto) => (
                 <button
@@ -1062,9 +1159,12 @@ export default function AppNew() {
             setIsAreaModalOpen(false);
             setEditingArea(null);
           }}
-          onUpdateAreaName={(name) =>
-            setEditingArea((prev) => (prev ? { ...prev, name } : prev))
-          }
+          onUpdateAreaName={(name) => {
+            setEditingArea((prev) => (prev ? { ...prev, name } : prev));
+            if (editingArea?.tipo === "tv") {
+              setEquipmentDraft((prev) => ({ ...prev, nomeMaquina: name }));
+            }
+          }}
           onUpdateAreaPrinters={(printers) =>
             setEditingArea((prev) => (prev ? { ...prev, printers } : prev))
           }
@@ -1123,19 +1223,22 @@ function AreaModal({
   setEquipmentDraft,
   onAddEquipment,
   onDeleteEquipment,
-          onEditEquipment,
-          onCancelEditEquipment,
-          isEditingEquipment,
-          onUploadAreaImage,
+  onEditEquipment,
+  onCancelEditEquipment,
+  isEditingEquipment,
+  onUploadAreaImage,
 }) {
   const colorInputRef = useRef(null);
+  const isTv = area.tipo === "tv";
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" onClick={(event) => event.stopPropagation()}>
         <header className="modal-header">
           <div>
-            <div className="modal-title">Informações da área: {area.name}</div>
+            <div className="modal-title">
+              {isTv ? "📺 Informações da TV:" : "Informações da área:"} {area.name}
+            </div>
             <div className="equipment-meta">
               {unitName} · {floorName}
             </div>
@@ -1148,13 +1251,14 @@ function AreaModal({
         <section className="modal-body">
           <div className="field-group">
             <label className="field-label" htmlFor="area-name">
-              Nome da área
+              {isTv ? "Identificação da TV *" : "Nome da área"}
             </label>
             <input
               id="area-name"
               className="field-input"
               value={area.name}
               onChange={(event) => onUpdateAreaName(event.target.value)}
+              placeholder={isTv ? "Ex: TV Recepção" : "Nova área"}
             />
           </div>
 
@@ -1168,13 +1272,13 @@ function AreaModal({
                 className="color-swatch"
                 aria-label="Escolher cor"
                 onClick={() => colorInputRef.current?.click()}
-                style={{ backgroundColor: area.color || "#dbeafe" }}
+                style={{ backgroundColor: area.color || (isTv ? "#475569" : "#dbeafe") }}
               />
               <input
                 ref={colorInputRef}
                 id="area-color"
                 type="color"
-                value={area.color || "#dbeafe"}
+                value={area.color || (isTv ? "#475569" : "#dbeafe")}
                 onChange={(event) => onUpdateAreaColor(event.target.value)}
                 className="color-input-hidden"
               />
@@ -1193,158 +1297,24 @@ function AreaModal({
               onClick={onResetAreaColor}
               style={{ marginTop: 6, width: "fit-content" }}
             >
-              Voltar para azul padrão
+              {isTv ? "Voltar para cinza padrão" : "Voltar para azul padrão"}
             </button>
           </div>
 
           <div className="field-group">
-            <label className="field-label" htmlFor="area-printers">
-              Impressoras da área (uma por linha)
-            </label>
-            <textarea
-              id="area-printers"
-              className="field-textarea"
-              value={(area.printers || []).join("\n")}
-              onChange={(event) => {
-                const lines = event.target.value
-                  .split("\n")
-                  .map((line) => line.trim())
-                  .filter(Boolean);
-                onUpdateAreaPrinters(lines);
-              }}
-              placeholder="Exemplo:\nHP LaserJet 123\nBrother XYZ"
-            />
-          </div>
-
-          <div className="field-group">
-            <div className="field-label">Equipamentos cadastrados</div>
-            <div className="equipments-list">
-              {equipmentsLoading ? (
-                <div className="equipment-meta">Carregando equipamentos...</div>
-              ) : equipments.length === 0 ? (
-                <div className="equipment-meta">Nenhum equipamento nesta área.</div>
-              ) : (
-                equipments.map((equipment) => (
-                  <div key={equipment.id} className="equipment-card">
-                    <div className="equipment-meta">
-                      Tipo: <strong>{getTipoLabel(equipment.tipo)}</strong>
-                    </div>
-                    {equipment.tipo === "televisao" ? (
-                      <>
-                        <div className="equipment-meta">
-                          Identificação: <strong>{equipment.nomeMaquina}</strong>
-                        </div>
-                        <div className="equipment-meta">
-                          Modelo TV: <strong>{equipment.modeloTv || "-"}</strong>
-                        </div>
-                        <div className="equipment-meta">
-                          Série TV: <strong>{equipment.serialTv || "-"}</strong>
-                        </div>
-                        <div className="equipment-meta">
-                          Conexão TV: <strong>{equipment.conexaoTv === "wifi" ? "Wi-Fi" : equipment.conexaoTv === "cabo" ? "Cabo" : "-"}</strong>
-                        </div>
-                        <div className="equipment-meta">
-                          Possui Gautek: <strong>{equipment.hasGautek ? "Sim" : "Não"}</strong>
-                        </div>
-                        {equipment.hasGautek && (
-                          <>
-                            <div className="equipment-meta">
-                              Série Gautek: <strong>{equipment.serialGautek || "-"}</strong>
-                            </div>
-                            <div className="equipment-meta">
-                              Conexão Gautek: <strong>{equipment.conexaoGautek === "wifi" ? "Wi-Fi" : equipment.conexaoGautek === "cabo" ? "Cabo" : "-"}</strong>
-                            </div>
-                          </>
-                        )}
-                        <div className="equipment-meta">
-                          Status:{" "}
-                          <span
-                            className={
-                              "badge " +
-                              (equipment.status === "ativo" ? "badge-success" : "badge-danger")
-                            }
-                          >
-                            {equipment.status === "ativo" ? "Ativo" : "Inativo"}
-                          </span>
-                        </div>
-                        {equipment.observacoes && (
-                          <div className="equipment-meta" style={{ gridColumn: "1 / -1" }}>
-                            Observações: <strong>{equipment.observacoes}</strong>
-                          </div>
-                        )}
-                      </>
-                    ) : (
-                      <>
-                        <div className="equipment-meta">
-                          Proprietário: <strong>{equipment.proprietario || "-"}</strong>
-                        </div>
-                        <div className="equipment-meta">
-                          Máquina: <strong>{equipment.nomeMaquina}</strong>
-                        </div>
-                        <div className="equipment-meta">
-                          Usuário: <strong>{equipment.usuarioLogado || "-"}</strong>
-                        </div>
-                        <div className="equipment-meta">
-                          AnyDesk: <strong>{equipment.anydesk || "-"}</strong>
-                        </div>
-                        <div className="equipment-meta">
-                          Kaspersky: <strong>{equipment.kaspersky || "-"}</strong>
-                        </div>
-                        <div className="equipment-meta">
-                          Status:{" "}
-                          <span
-                            className={
-                              "badge " +
-                              (equipment.status === "ativo" ? "badge-success" : "badge-danger")
-                            }
-                          >
-                            {equipment.status === "ativo" ? "Ativo" : "Inativo"}
-                          </span>
-                        </div>
-                        <div className="equipment-meta">
-                          Armazenamento livre: <strong>{equipment.armazenamentoLivre || "-"}</strong>
-                        </div>
-                        {equipment.observacoes && (
-                          <div className="equipment-meta" style={{ gridColumn: "1 / -1" }}>
-                            Observações: <strong>{equipment.observacoes}</strong>
-                          </div>
-                        )}
-                      </>
-                    )}
-                    <div className="equipment-actions">
-                      <button
-                        type="button"
-                        className="button button-ghost"
-                        onClick={() => onDeleteEquipment(equipment.id)}
-                      >
-                        Remover
-                      </button>
-                      <button
-                        type="button"
-                        className="button button-ghost"
-                        onClick={() => onEditEquipment(equipment)}
-                      >
-                        Editar
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-
-          <div className="field-group">
-            <div className="field-label">Imagem da área</div>
+            <div className="field-label">{isTv ? "Imagem da TV" : "Imagem da área"}</div>
             {area.imagemUrl ? (
               <div className="area-image-wrapper">
                 <img src={buildImageUrl(area.imagemUrl)} alt={area.name} className="area-image" />
               </div>
             ) : (
-              <div className="equipment-meta">Nenhuma imagem cadastrada para esta área.</div>
+              <div className="equipment-meta">
+                {isTv ? "Nenhuma imagem cadastrada para esta TV." : "Nenhuma imagem cadastrada para esta área."}
+              </div>
             )}
             <div className="area-image-actions">
               <label className="button button-ghost equipment-upload-button">
-                <span>{area.imagemUrl ? "Trocar imagem da área" : "Adicionar imagem da área"}</span>
+                <span>{area.imagemUrl ? (isTv ? "Trocar imagem da TV" : "Trocar imagem da área") : (isTv ? "Adicionar imagem da TV" : "Adicionar imagem da área")}</span>
                 <input
                   type="file"
                   accept="image/*"
@@ -1357,300 +1327,568 @@ function AreaModal({
             </div>
           </div>
 
-          <div className="field-group">
-            <div className="field-label">Adicionar equipamento</div>
-            <div className="grid-two">
-              <div className="field-group">
-                <label className="field-label" htmlFor="tipo">
-                  Tipo
+          {isTv ? (
+            <div className="tv-specific-fields">
+              <div className="grid-two">
+                <div className="field-group">
+                  <label className="field-label" htmlFor="modeloTv">
+                    Modelo da TV
+                  </label>
+                  <input
+                    id="modeloTv"
+                    className="field-input"
+                    value={equipmentDraft.modeloTv || ""}
+                    onChange={(event) =>
+                      setEquipmentDraft((prev) => ({ ...prev, modeloTv: event.target.value }))
+                    }
+                    placeholder="Ex: LG ThinQ 55"
+                  />
+                </div>
+                <div className="field-group">
+                  <label className="field-label" htmlFor="serialTv">
+                    Número de Série da TV
+                  </label>
+                  <input
+                    id="serialTv"
+                    className="field-input"
+                    value={equipmentDraft.serialTv || ""}
+                    onChange={(event) =>
+                      setEquipmentDraft((prev) => ({ ...prev, serialTv: event.target.value }))
+                    }
+                  />
+                </div>
+                <div className="field-group">
+                  <label className="field-label" htmlFor="conexaoTv">
+                    Conexão da TV
+                  </label>
+                  <select
+                    id="conexaoTv"
+                    className="field-select"
+                    value={equipmentDraft.conexaoTv || "wifi"}
+                    onChange={(event) =>
+                      setEquipmentDraft((prev) => ({ ...prev, conexaoTv: event.target.value }))
+                    }
+                  >
+                    <option value="wifi">Wi-Fi</option>
+                    <option value="cabo">Cabo</option>
+                  </select>
+                </div>
+                <div className="field-group">
+                  <label className="field-label" htmlFor="status">
+                    Status
+                  </label>
+                  <select
+                    id="status"
+                    className="field-select"
+                    value={equipmentDraft.status || "ativo"}
+                    onChange={(event) =>
+                      setEquipmentDraft((prev) => ({ ...prev, status: event.target.value }))
+                    }
+                  >
+                    <option value="ativo">Ativo</option>
+                    <option value="inativo">Inativo</option>
+                  </select>
+                </div>
+                <div className="field-group">
+                  <label className="field-label" htmlFor="hasGautek">
+                    Possui Gautek TV Box?
+                  </label>
+                  <select
+                    id="hasGautek"
+                    className="field-select"
+                    value={equipmentDraft.hasGautek ? "true" : "false"}
+                    onChange={(event) =>
+                      setEquipmentDraft((prev) => ({ ...prev, hasGautek: event.target.value === "true" }))
+                    }
+                  >
+                    <option value="false">Não</option>
+                    <option value="true">Sim</option>
+                  </select>
+                </div>
+                {equipmentDraft.hasGautek && (
+                  <>
+                    <div className="field-group">
+                      <label className="field-label" htmlFor="serialGautek">
+                        Número de Série do Gautek
+                      </label>
+                      <input
+                        id="serialGautek"
+                        className="field-input"
+                        value={equipmentDraft.serialGautek || ""}
+                        onChange={(event) =>
+                          setEquipmentDraft((prev) => ({ ...prev, serialGautek: event.target.value }))
+                        }
+                      />
+                    </div>
+                    <div className="field-group">
+                      <label className="field-label" htmlFor="conexaoGautek">
+                        Conexão do Gautek
+                      </label>
+                      <select
+                        id="conexaoGautek"
+                        className="field-select"
+                        value={equipmentDraft.conexaoGautek || "wifi"}
+                        onChange={(event) =>
+                          setEquipmentDraft((prev) => ({ ...prev, conexaoGautek: event.target.value }))
+                        }
+                      >
+                        <option value="wifi">Wi-Fi</option>
+                        <option value="cabo">Cabo</option>
+                      </select>
+                    </div>
+                  </>
+                )}
+              </div>
+              <div className="field-group" style={{ marginTop: 12 }}>
+                <label className="field-label" htmlFor="observacoes">
+                  Observações da TV
                 </label>
-                <select
-                  id="tipo"
-                  className="field-select"
-                  value={equipmentDraft.tipo}
+                <textarea
+                  id="observacoes"
+                  className="field-textarea"
+                  value={equipmentDraft.observacoes || ""}
                   onChange={(event) =>
-                    setEquipmentDraft((prev) => ({ ...prev, tipo: event.target.value }))
+                    setEquipmentDraft((prev) => ({ ...prev, observacoes: event.target.value }))
                   }
-                >
-                  <option value="notebook">Notebook</option>
-                  <option value="desktop">Desktop</option>
-                  <option value="impressora">Impressora</option>
-                  <option value="televisao">Televisão</option>
-                  <option value="outro">Outro</option>
-                </select>
+                />
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="field-group">
+                <label className="field-label" htmlFor="area-printers">
+                  Impressoras da área (uma por linha)
+                </label>
+                <textarea
+                  id="area-printers"
+                  className="field-textarea"
+                  value={(area.printers || []).join("\n")}
+                  onChange={(event) => {
+                    const lines = event.target.value
+                      .split("\n")
+                      .map((line) => line.trim())
+                      .filter(Boolean);
+                    onUpdateAreaPrinters(lines);
+                  }}
+                  placeholder="Exemplo:\nHP LaserJet 123\nBrother XYZ"
+                />
               </div>
 
-              {equipmentDraft.tipo === "televisao" ? (
-                <>
+              <div className="field-group">
+                <div className="field-label">Equipamentos cadastrados</div>
+                <div className="equipments-list">
+                  {equipmentsLoading ? (
+                    <div className="equipment-meta">Carregando equipamentos...</div>
+                  ) : equipments.length === 0 ? (
+                    <div className="equipment-meta">Nenhum equipamento nesta área.</div>
+                  ) : (
+                    equipments.map((equipment) => (
+                      <div key={equipment.id} className="equipment-card">
+                        <div className="equipment-meta">
+                          Tipo: <strong>{getTipoLabel(equipment.tipo)}</strong>
+                        </div>
+                        {equipment.tipo === "televisao" ? (
+                          <>
+                            <div className="equipment-meta">
+                              Identificação: <strong>{equipment.nomeMaquina}</strong>
+                            </div>
+                            <div className="equipment-meta">
+                              Modelo TV: <strong>{equipment.modeloTv || "-"}</strong>
+                            </div>
+                            <div className="equipment-meta">
+                              Série TV: <strong>{equipment.serialTv || "-"}</strong>
+                            </div>
+                            <div className="equipment-meta">
+                              Conexão TV: <strong>{equipment.conexaoTv === "wifi" ? "Wi-Fi" : equipment.conexaoTv === "cabo" ? "Cabo" : "-"}</strong>
+                            </div>
+                            <div className="equipment-meta">
+                              Possui Gautek: <strong>{equipment.hasGautek ? "Sim" : "Não"}</strong>
+                            </div>
+                            {equipment.hasGautek && (
+                              <>
+                                <div className="equipment-meta">
+                                  Série Gautek: <strong>{equipment.serialGautek || "-"}</strong>
+                                </div>
+                                <div className="equipment-meta">
+                                  Conexão Gautek: <strong>{equipment.conexaoGautek === "wifi" ? "Wi-Fi" : equipment.conexaoGautek === "cabo" ? "Cabo" : "-"}</strong>
+                                </div>
+                              </>
+                            )}
+                            <div className="equipment-meta">
+                              Status:{" "}
+                              <span
+                                className={
+                                  "badge " +
+                                  (equipment.status === "ativo" ? "badge-success" : "badge-danger")
+                                }
+                              >
+                                {equipment.status === "ativo" ? "Ativo" : "Inativo"}
+                              </span>
+                            </div>
+                            {equipment.observacoes && (
+                              <div className="equipment-meta" style={{ gridColumn: "1 / -1" }}>
+                                Observações: <strong>{equipment.observacoes}</strong>
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <>
+                            <div className="equipment-meta">
+                              Proprietário: <strong>{equipment.proprietario || "-"}</strong>
+                            </div>
+                            <div className="equipment-meta">
+                              Máquina: <strong>{equipment.nomeMaquina}</strong>
+                            </div>
+                            <div className="equipment-meta">
+                              Usuário: <strong>{equipment.usuarioLogado || "-"}</strong>
+                            </div>
+                            <div className="equipment-meta">
+                              AnyDesk: <strong>{equipment.anydesk || "-"}</strong>
+                            </div>
+                            <div className="equipment-meta">
+                              Kaspersky: <strong>{equipment.kaspersky || "-"}</strong>
+                            </div>
+                            <div className="equipment-meta">
+                              Status:{" "}
+                              <span
+                                className={
+                                  "badge " +
+                                  (equipment.status === "ativo" ? "badge-success" : "badge-danger")
+                                }
+                              >
+                                {equipment.status === "ativo" ? "Ativo" : "Inativo"}
+                              </span>
+                            </div>
+                            <div className="equipment-meta">
+                              Armazenamento livre: <strong>{equipment.armazenamentoLivre || "-"}</strong>
+                            </div>
+                            {equipment.observacoes && (
+                              <div className="equipment-meta" style={{ gridColumn: "1 / -1" }}>
+                                Observações: <strong>{equipment.observacoes}</strong>
+                              </div>
+                            )}
+                          </>
+                        )}
+                        <div className="equipment-actions">
+                          <button
+                            type="button"
+                            className="button button-ghost"
+                            onClick={() => onDeleteEquipment(equipment.id)}
+                          >
+                            Remover
+                          </button>
+                          <button
+                            type="button"
+                            className="button button-ghost"
+                            onClick={() => onEditEquipment(equipment)}
+                          >
+                            Editar
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              <div className="field-group">
+                <div className="field-label">Adicionar equipamento</div>
+                <div className="grid-two">
                   <div className="field-group">
-                    <label className="field-label" htmlFor="nomeMaquina">
-                      Identificação da TV *
-                    </label>
-                    <input
-                      id="nomeMaquina"
-                      className="field-input"
-                      value={equipmentDraft.nomeMaquina}
-                      onChange={(event) =>
-                        setEquipmentDraft((prev) => ({ ...prev, nomeMaquina: event.target.value }))
-                      }
-                      placeholder="Ex: TV Recepção"
-                    />
-                  </div>
-                  <div className="field-group">
-                    <label className="field-label" htmlFor="modeloTv">
-                      Modelo da TV
-                    </label>
-                    <input
-                      id="modeloTv"
-                      className="field-input"
-                      value={equipmentDraft.modeloTv}
-                      onChange={(event) =>
-                        setEquipmentDraft((prev) => ({ ...prev, modeloTv: event.target.value }))
-                      }
-                      placeholder="Ex: LG ThinQ 55"
-                    />
-                  </div>
-                  <div className="field-group">
-                    <label className="field-label" htmlFor="serialTv">
-                      Número de Série da TV
-                    </label>
-                    <input
-                      id="serialTv"
-                      className="field-input"
-                      value={equipmentDraft.serialTv}
-                      onChange={(event) =>
-                        setEquipmentDraft((prev) => ({ ...prev, serialTv: event.target.value }))
-                      }
-                    />
-                  </div>
-                  <div className="field-group">
-                    <label className="field-label" htmlFor="conexaoTv">
-                      Conexão da TV
+                    <label className="field-label" htmlFor="tipo">
+                      Tipo
                     </label>
                     <select
-                      id="conexaoTv"
+                      id="tipo"
                       className="field-select"
-                      value={equipmentDraft.conexaoTv}
+                      value={equipmentDraft.tipo}
                       onChange={(event) =>
-                        setEquipmentDraft((prev) => ({ ...prev, conexaoTv: event.target.value }))
+                        setEquipmentDraft((prev) => ({ ...prev, tipo: event.target.value }))
                       }
                     >
-                      <option value="wifi">Wi-Fi</option>
-                      <option value="cabo">Cabo</option>
+                      <option value="notebook">Notebook</option>
+                      <option value="desktop">Desktop</option>
+                      <option value="impressora">Impressora</option>
+                      <option value="televisao">Televisão</option>
+                      <option value="outro">Outro</option>
                     </select>
                   </div>
-                  <div className="field-group">
-                    <label className="field-label" htmlFor="status">
-                      Status
-                    </label>
-                    <select
-                      id="status"
-                      className="field-select"
-                      value={equipmentDraft.status}
-                      onChange={(event) =>
-                        setEquipmentDraft((prev) => ({ ...prev, status: event.target.value }))
-                      }
-                    >
-                      <option value="ativo">Ativo</option>
-                      <option value="inativo">Inativo</option>
-                    </select>
-                  </div>
-                  <div className="field-group">
-                    <label className="field-label" htmlFor="hasGautek">
-                      Possui Gautek TV Box?
-                    </label>
-                    <select
-                      id="hasGautek"
-                      className="field-select"
-                      value={equipmentDraft.hasGautek ? "true" : "false"}
-                      onChange={(event) =>
-                        setEquipmentDraft((prev) => ({ ...prev, hasGautek: event.target.value === "true" }))
-                      }
-                    >
-                      <option value="false">Não</option>
-                      <option value="true">Sim</option>
-                    </select>
-                  </div>
-                  {equipmentDraft.hasGautek && (
+
+                  {equipmentDraft.tipo === "televisao" ? (
                     <>
                       <div className="field-group">
-                        <label className="field-label" htmlFor="serialGautek">
-                          Número de Série do Gautek
+                        <label className="field-label" htmlFor="nomeMaquina">
+                          Identificação da TV *
                         </label>
                         <input
-                          id="serialGautek"
+                          id="nomeMaquina"
                           className="field-input"
-                          value={equipmentDraft.serialGautek}
+                          value={equipmentDraft.nomeMaquina}
                           onChange={(event) =>
-                            setEquipmentDraft((prev) => ({ ...prev, serialGautek: event.target.value }))
+                            setEquipmentDraft((prev) => ({ ...prev, nomeMaquina: event.target.value }))
+                          }
+                          placeholder="Ex: TV Recepção"
+                        />
+                      </div>
+                      <div className="field-group">
+                        <label className="field-label" htmlFor="modeloTv">
+                          Modelo da TV
+                        </label>
+                        <input
+                          id="modeloTv"
+                          className="field-input"
+                          value={equipmentDraft.modeloTv}
+                          onChange={(event) =>
+                            setEquipmentDraft((prev) => ({ ...prev, modeloTv: event.target.value }))
+                          }
+                          placeholder="Ex: LG ThinQ 55"
+                        />
+                      </div>
+                      <div className="field-group">
+                        <label className="field-label" htmlFor="serialTv">
+                          Número de Série da TV
+                        </label>
+                        <input
+                          id="serialTv"
+                          className="field-input"
+                          value={equipmentDraft.serialTv}
+                          onChange={(event) =>
+                            setEquipmentDraft((prev) => ({ ...prev, serialTv: event.target.value }))
                           }
                         />
                       </div>
                       <div className="field-group">
-                        <label className="field-label" htmlFor="conexaoGautek">
-                          Conexão do Gautek
+                        <label className="field-label" htmlFor="conexaoTv">
+                          Conexão da TV
                         </label>
                         <select
-                          id="conexaoGautek"
+                          id="conexaoTv"
                           className="field-select"
-                          value={equipmentDraft.conexaoGautek}
+                          value={equipmentDraft.conexaoTv}
                           onChange={(event) =>
-                            setEquipmentDraft((prev) => ({ ...prev, conexaoGautek: event.target.value }))
+                            setEquipmentDraft((prev) => ({ ...prev, conexaoTv: event.target.value }))
                           }
                         >
                           <option value="wifi">Wi-Fi</option>
                           <option value="cabo">Cabo</option>
                         </select>
                       </div>
+                      <div className="field-group">
+                        <label className="field-label" htmlFor="status">
+                          Status
+                        </label>
+                        <select
+                          id="status"
+                          className="field-select"
+                          value={equipmentDraft.status}
+                          onChange={(event) =>
+                            setEquipmentDraft((prev) => ({ ...prev, status: event.target.value }))
+                          }
+                        >
+                          <option value="ativo">Ativo</option>
+                          <option value="inativo">Inativo</option>
+                        </select>
+                      </div>
+                      <div className="field-group">
+                        <label className="field-label" htmlFor="hasGautek">
+                          Possui Gautek TV Box?
+                        </label>
+                        <select
+                          id="hasGautek"
+                          className="field-select"
+                          value={equipmentDraft.hasGautek ? "true" : "false"}
+                          onChange={(event) =>
+                            setEquipmentDraft((prev) => ({ ...prev, hasGautek: event.target.value === "true" }))
+                          }
+                        >
+                          <option value="false">Não</option>
+                          <option value="true">Sim</option>
+                        </select>
+                      </div>
+                      {equipmentDraft.hasGautek && (
+                        <>
+                          <div className="field-group">
+                            <label className="field-label" htmlFor="serialGautek">
+                              Número de Série do Gautek
+                            </label>
+                            <input
+                              id="serialGautek"
+                              className="field-input"
+                              value={equipmentDraft.serialGautek}
+                              onChange={(event) =>
+                                setEquipmentDraft((prev) => ({ ...prev, serialGautek: event.target.value }))
+                              }
+                            />
+                          </div>
+                          <div className="field-group">
+                            <label className="field-label" htmlFor="conexaoGautek">
+                              Conexão do Gautek
+                            </label>
+                            <select
+                              id="conexaoGautek"
+                              className="field-select"
+                              value={equipmentDraft.conexaoGautek}
+                              onChange={(event) =>
+                                setEquipmentDraft((prev) => ({ ...prev, conexaoGautek: event.target.value }))
+                              }
+                            >
+                              <option value="wifi">Wi-Fi</option>
+                              <option value="cabo">Cabo</option>
+                            </select>
+                          </div>
+                        </>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <div className="field-group">
+                        <label className="field-label" htmlFor="proprietario">
+                          Proprietário
+                        </label>
+                        <input
+                          id="proprietario"
+                          className="field-input"
+                          value={equipmentDraft.proprietario}
+                          onChange={(event) =>
+                            setEquipmentDraft((prev) => ({ ...prev, proprietario: event.target.value }))
+                          }
+                        />
+                      </div>
+                      <div className="field-group">
+                        <label className="field-label" htmlFor="nomeMaquina">
+                          Nome da máquina *
+                        </label>
+                        <input
+                          id="nomeMaquina"
+                          className="field-input"
+                          value={equipmentDraft.nomeMaquina}
+                          onChange={(event) =>
+                            setEquipmentDraft((prev) => ({ ...prev, nomeMaquina: event.target.value }))
+                          }
+                        />
+                      </div>
+                      <div className="field-group">
+                        <label className="field-label" htmlFor="usuarioLogado">
+                          Usuário logado
+                        </label>
+                        <input
+                          id="usuarioLogado"
+                          className="field-input"
+                          value={equipmentDraft.usuarioLogado}
+                          onChange={(event) =>
+                            setEquipmentDraft((prev) => ({ ...prev, usuarioLogado: event.target.value }))
+                          }
+                        />
+                      </div>
+                      <div className="field-group">
+                        <label className="field-label" htmlFor="anydesk">
+                          AnyDesk
+                        </label>
+                        <input
+                          id="anydesk"
+                          className="field-input"
+                          value={equipmentDraft.anydesk}
+                          onChange={(event) =>
+                            setEquipmentDraft((prev) => ({ ...prev, anydesk: event.target.value }))
+                          }
+                        />
+                      </div>
+                      <div className="field-group">
+                        <label className="field-label" htmlFor="kaspersky">
+                          Kaspersky
+                        </label>
+                        <input
+                          id="kaspersky"
+                          className="field-input"
+                          value={equipmentDraft.kaspersky}
+                          onChange={(event) =>
+                            setEquipmentDraft((prev) => ({ ...prev, kaspersky: event.target.value }))
+                          }
+                        />
+                      </div>
+                      <div className="field-group">
+                        <label className="field-label" htmlFor="status">
+                          Status
+                        </label>
+                        <select
+                          id="status"
+                          className="field-select"
+                          value={equipmentDraft.status}
+                          onChange={(event) =>
+                            setEquipmentDraft((prev) => ({ ...prev, status: event.target.value }))
+                          }
+                        >
+                          <option value="ativo">Ativo</option>
+                          <option value="inativo">Inativo</option>
+                        </select>
+                      </div>
+                      <div className="field-group">
+                        <label className="field-label" htmlFor="armazenamentoLivre">
+                          Armazenamento livre
+                        </label>
+                        <input
+                          id="armazenamentoLivre"
+                          className="field-input"
+                          value={equipmentDraft.armazenamentoLivre}
+                          onChange={(event) =>
+                            setEquipmentDraft((prev) => ({
+                              ...prev,
+                              armazenamentoLivre: event.target.value,
+                            }))
+                          }
+                          placeholder="Ex: 20/100 GB"
+                        />
+                      </div>
                     </>
                   )}
-                </>
-              ) : (
-                <>
-                  <div className="field-group">
-                    <label className="field-label" htmlFor="proprietario">
-                      Proprietário
-                    </label>
-                    <input
-                      id="proprietario"
-                      className="field-input"
-                      value={equipmentDraft.proprietario}
-                      onChange={(event) =>
-                        setEquipmentDraft((prev) => ({ ...prev, proprietario: event.target.value }))
-                      }
-                    />
-                  </div>
-                  <div className="field-group">
-                    <label className="field-label" htmlFor="nomeMaquina">
-                      Nome da máquina *
-                    </label>
-                    <input
-                      id="nomeMaquina"
-                      className="field-input"
-                      value={equipmentDraft.nomeMaquina}
-                      onChange={(event) =>
-                        setEquipmentDraft((prev) => ({ ...prev, nomeMaquina: event.target.value }))
-                      }
-                    />
-                  </div>
-                  <div className="field-group">
-                    <label className="field-label" htmlFor="usuarioLogado">
-                      Usuário logado
-                    </label>
-                    <input
-                      id="usuarioLogado"
-                      className="field-input"
-                      value={equipmentDraft.usuarioLogado}
-                      onChange={(event) =>
-                        setEquipmentDraft((prev) => ({ ...prev, usuarioLogado: event.target.value }))
-                      }
-                    />
-                  </div>
-                  <div className="field-group">
-                    <label className="field-label" htmlFor="anydesk">
-                      AnyDesk
-                    </label>
-                    <input
-                      id="anydesk"
-                      className="field-input"
-                      value={equipmentDraft.anydesk}
-                      onChange={(event) =>
-                        setEquipmentDraft((prev) => ({ ...prev, anydesk: event.target.value }))
-                      }
-                    />
-                  </div>
-                  <div className="field-group">
-                    <label className="field-label" htmlFor="kaspersky">
-                      Kaspersky
-                    </label>
-                    <input
-                      id="kaspersky"
-                      className="field-input"
-                      value={equipmentDraft.kaspersky}
-                      onChange={(event) =>
-                        setEquipmentDraft((prev) => ({ ...prev, kaspersky: event.target.value }))
-                      }
-                    />
-                  </div>
-                  <div className="field-group">
-                    <label className="field-label" htmlFor="status">
-                      Status
-                    </label>
-                    <select
-                      id="status"
-                      className="field-select"
-                      value={equipmentDraft.status}
-                      onChange={(event) =>
-                        setEquipmentDraft((prev) => ({ ...prev, status: event.target.value }))
-                      }
-                    >
-                      <option value="ativo">Ativo</option>
-                      <option value="inativo">Inativo</option>
-                    </select>
-                  </div>
-                  <div className="field-group">
-                    <label className="field-label" htmlFor="armazenamentoLivre">
-                      Armazenamento livre
-                    </label>
-                    <input
-                      id="armazenamentoLivre"
-                      className="field-input"
-                      value={equipmentDraft.armazenamentoLivre}
-                      onChange={(event) =>
-                        setEquipmentDraft((prev) => ({
-                          ...prev,
-                          armazenamentoLivre: event.target.value,
-                        }))
-                      }
-                      placeholder="Ex: 20/100 GB"
-                    />
-                  </div>
-                </>
-              )}
-            </div>
-            <div className="field-group">
-              <label className="field-label" htmlFor="observacoes">
-                Observações
-              </label>
-              <textarea
-                id="observacoes"
-                className="field-textarea"
-                value={equipmentDraft.observacoes}
-                onChange={(event) =>
-                  setEquipmentDraft((prev) => ({ ...prev, observacoes: event.target.value }))
-                }
-              />
-            </div>
-          </div>
+                </div>
+                <div className="field-group">
+                  <label className="field-label" htmlFor="observacoes">
+                    Observações
+                  </label>
+                  <textarea
+                    id="observacoes"
+                    className="field-textarea"
+                    value={equipmentDraft.observacoes}
+                    onChange={(event) =>
+                      setEquipmentDraft((prev) => ({ ...prev, observacoes: event.target.value }))
+                    }
+                  />
+                </div>
+              </div>
+            </>
+          )}
         </section>
 
         <footer className="modal-footer">
           <button type="button" className="button button-ghost" onClick={onDeleteArea}>
-            Excluir área
+            {isTv ? "Excluir TV" : "Excluir área"}
           </button>
           <button type="button" className="button button-ghost" onClick={onClose}>
             Fechar
           </button>
-          <button type="button" className="button button-ghost" onClick={onSaveArea}>
-            Salvar área
+          <button type="button" className="button button-primary" onClick={onSaveArea}>
+            {isTv ? "Salvar TV" : "Salvar área"}
           </button>
-          {isEditingEquipment ? (
-            <>
-              <button
-                type="button"
-                className="button button-ghost"
-                onClick={onCancelEditEquipment}
-              >
-                Cancelar edição
-              </button>
+          {!isTv && (
+            isEditingEquipment ? (
+              <>
+                <button
+                  type="button"
+                  className="button button-ghost"
+                  onClick={onCancelEditEquipment}
+                >
+                  Cancelar edição
+                </button>
+                <button type="button" className="button button-primary" onClick={onAddEquipment}>
+                  Atualizar equipamento
+                </button>
+              </>
+            ) : (
               <button type="button" className="button button-primary" onClick={onAddEquipment}>
-                Atualizar equipamento
+                Salvar equipamento
               </button>
-            </>
-          ) : (
-            <button type="button" className="button button-primary" onClick={onAddEquipment}>
-              Salvar equipamento
-            </button>
+            )
           )}
         </footer>
       </div>

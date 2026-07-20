@@ -46,6 +46,11 @@ const areaSchema = new mongoose.Schema(
       default: "#dbeafe", // blue-100
       trim: true,
     },
+    tipo: {
+      type: String,
+      enum: ["area", "tv"],
+      default: "area",
+    },
   },
   { timestamps: true },
 );

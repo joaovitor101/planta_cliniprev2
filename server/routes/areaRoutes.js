@@ -98,6 +98,8 @@ router.delete("/:id", async (req, res, next) => {
   try {
     const { id } = req.params;
     await Area.findByIdAndDelete(id);
+    const Equipment = require("../models/Equipment");
+    await Equipment.deleteMany({ areaId: id });
     res.status(204).send();
   } catch (error) {
     next(error);
